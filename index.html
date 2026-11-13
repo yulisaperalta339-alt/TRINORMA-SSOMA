@@ -1,0 +1,2822 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COSAPI | Trinorma ISO 2026 - Plataforma Interactiva de Auditoría</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --cosapi-blue: #0096D6;
+      --cosapi-dark-blue: #0077B6;
+      --cosapi-light-blue: #E6F4FA;
+      --cosapi-accent-red: #DC2626;
+      --cosapi-slate: #334155;
+      --cosapi-bg: #F8FAFC;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--cosapi-bg);
+      color: var(--cosapi-slate);
+      overflow-x: hidden;
+    }
+
+    /* Animaciones suaves para COSAPIN sin deformar ni recortar su imagen */
+    @keyframes cosapinFloat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-7px); }
+    }
+    @keyframes cosapinTalk {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      25% { transform: scale(1.03) rotate(-1.5deg); }
+      75% { transform: scale(1.03) rotate(1.5deg); }
+    }
+    @keyframes helmetGlow {
+      0%, 100% { filter: drop-shadow(0 6px 14px rgba(0, 150, 214, 0.25)); }
+      50% { filter: drop-shadow(0 8px 22px rgba(56, 189, 248, 0.55)); }
+    }
+
+    .cosapin-sprite {
+      object-fit: contain;
+      animation: cosapinFloat 3.6s ease-in-out infinite, helmetGlow 4s ease-in-out infinite;
+      transition: transform 0.25s ease;
+    }
+    .cosapin-sprite.talking {
+      animation: cosapinTalk 0.45s ease-in-out 3, helmetGlow 2s ease-in-out infinite;
+    }
+
+    /* Estilos del Rosco Pasapalabras */
+    .rosco-container {
+      position: relative;
+      width: min(88vw, 520px);
+      height: min(88vw, 520px);
+      margin: 0 auto;
+    }
+    .rosco-letter {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      margin-left: -18px;
+      margin-top: -18px;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+      user-select: none;
+      cursor: pointer;
+    }
+    @media (min-width: 640px) {
+      .rosco-letter {
+        width: 42px;
+        height: 42px;
+        margin-left: -21px;
+        margin-top: -21px;
+        font-size: 0.95rem;
+      }
+    }
+    .rosco-letter.pending {
+      background: linear-gradient(135deg, #0096D6, #0077B6);
+      color: #ffffff;
+      border: 2px solid #ffffff;
+    }
+    .rosco-letter.active {
+      background: linear-gradient(135deg, #F59E0B, #D97706);
+      color: #ffffff;
+      transform: scale(1.28);
+      z-index: 20;
+      border: 3px solid #FEF3C7;
+      box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.35);
+    }
+    .rosco-letter.correct {
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: #ffffff;
+      border: 2px solid #D1FAE5;
+    }
+    .rosco-letter.wrong {
+      background: linear-gradient(135deg, #DC2626, #B91C1C);
+      color: #ffffff;
+      border: 2px solid #FEE2E2;
+    }
+    .rosco-letter.passed {
+      background: linear-gradient(135deg, #0284C7, #0369A1);
+      color: #BAE6FD;
+      border: 2px dashed #7DD3FC;
+    }
+
+    /* Cuadrícula Pupiletras */
+    .wordsearch-cell {
+      user-select: none;
+      touch-action: none;
+      transition: background-color 0.15s ease, transform 0.1s ease;
+    }
+    .wordsearch-cell.selected {
+      background-color: #F59E0B !important;
+      color: #ffffff !important;
+      transform: scale(1.06);
+    }
+    .wordsearch-cell.found {
+      background-color: #0096D6 !important;
+      color: #ffffff !important;
+    }
+    .wordsearch-cell.hinted {
+      background-color: #DC2626 !important;
+      color: #ffffff !important;
+      animation: pulse 1s infinite;
+    }
+
+    /* Scrollbar sutil */
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: #F1F5F9; border-radius: 8px; }
+    ::-webkit-scrollbar-thumb { background: #94A3B8; border-radius: 8px; }
+    ::-webkit-scrollbar-thumb:hover { background: #0096D6; }
+
+    /* Estilos de impresión para el Checklist */
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area { position: absolute; left: 0; top: 0; width: 100%; background: white; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- BARRA SUPERIOR CORPORATIVA COSAPI + REPRODUCTOR MUSICAL -->
+  <header class="bg-white border-b-4 border-[#0096D6] shadow-sm sticky top-0 z-40 no-print">
+    <div class="max-w-[1440px] mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Logo COSAPI Izquierda (Proporción original intacta) -->
+      <div class="flex items-center gap-3">
+        <div class="bg-[#0096D6] rounded-xl px-3 py-1.5 shadow-sm flex items-center justify-center">
+          <img src="COSAPIIIIIII.jpg" alt="Logo COSAPI" class="h-10 sm:h-12 w-auto object-contain rounded"
+               onerror="this.onerror=null; this.src='https://placehold.co/220x64/0096D6/FFFFFF?text=COSAPI';" />
+        </div>
+        <div class="hidden md:block border-l-2 border-slate-200 pl-3">
+          <span class="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#0077B6] bg-[#E6F4FA] px-2.5 py-0.5 rounded-full">
+            <i class="fa-solid fa-shield-halved"></i> Trinorma ISO 2026
+          </span>
+          <h1 class="text-sm lg:text-base font-extrabold text-slate-800 leading-tight mt-0.5">
+            Del Requisito a la Evidencia · Auditoría Integrada
+          </h1>
+        </div>
+      </div>
+
+      <!-- Reproductor de Música Retro / Épica Integrado -->
+      <div class="flex-1 min-w-[270px] max-w-xl bg-slate-50 border border-slate-200 rounded-2xl px-3 py-1.5 flex items-center gap-2 shadow-inner">
+        <button id="btn-music-toggle" onclick="MusicEngine.togglePlay()" title="Reproducir / Pausar Música"
+                class="w-9 h-9 rounded-xl bg-[#0096D6] hover:bg-[#0077B6] text-white flex items-center justify-center shrink-0 transition shadow">
+          <i id="music-play-icon" class="fa-solid fa-play text-xs"></i>
+        </button>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#0077B6]">
+            <span><i class="fa-solid fa-music mr-1"></i>Banda Sonora Vista Actual</span>
+            <span id="music-status-badge" class="text-slate-400">Listo</span>
+          </div>
+          <select id="music-selector" onchange="MusicEngine.selectTrack(this.value)"
+                  class="w-full text-xs font-semibold text-slate-700 bg-transparent focus:outline-none truncate cursor-pointer">
+          </select>
+        </div>
+        <button onclick="MusicEngine.nextTrack()" title="Siguiente Canción"
+                class="w-8 h-8 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center shrink-0 transition">
+          <i class="fa-solid fa-forward-step text-xs"></i>
+        </button>
+        <div class="hidden sm:flex items-center gap-1.5 pl-1 border-l border-slate-200">
+          <i class="fa-solid fa-volume-high text-xs text-slate-400"></i>
+          <input id="music-volume" type="range" min="0" max="100" value="35" oninput="MusicEngine.setVolume(this.value)"
+                 class="w-14 accent-[#0096D6] cursor-pointer" title="Volumen">
+        </div>
+      </div>
+
+      <!-- Logo Cero Accidentes con Integridad Derecha (Proporción original intacta) -->
+      <div class="flex items-center gap-3">
+        <div class="bg-white border border-slate-200 rounded-xl px-2.5 py-1 shadow-sm flex items-center justify-center">
+          <img src="Cero accidentes con integridad-01.png" alt="Nuestra meta Cero Accidentes con Integridad"
+               class="h-11 sm:h-12 w-auto object-contain"
+               onerror="this.onerror=null; this.src='https://placehold.co/120x64/FFFFFF/DC2626?text=CERO+ACCIDENTES';" />
+        </div>
+      </div>
+    </div>
+
+    <!-- NAVEGACIÓN PRINCIPAL DE LAS 5 VISTAS -->
+    <nav class="bg-gradient-to-r from-[#0077B6] via-[#0096D6] to-[#0077B6] text-white px-3 sm:px-6 py-2 shadow-md">
+      <div class="max-w-[1440px] mx-auto flex items-center justify-between gap-2 overflow-x-auto">
+        <div class="flex items-center gap-1.5 sm:gap-2">
+          <button onclick="switchView('rosco')" id="tab-rosco"
+                  class="nav-tab active-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold flex items-center gap-2 whitespace-nowrap transition shadow-sm bg-white text-[#0077B6]">
+            <i class="fa-solid fa-circle-notch"></i> 1. Pasapalabras Trinorma
+          </button>
+          <button onclick="switchView('trivia')" id="tab-trivia"
+                  class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition text-white/90 hover:bg-white/15">
+            <i class="fa-solid fa-trophy"></i> 2. Desafío Auditor 2026
+          </button>
+          <button onclick="switchView('pupiletras')" id="tab-pupiletras"
+                  class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition text-white/90 hover:bg-white/15">
+            <i class="fa-solid fa-table-cells"></i> 3. Pupiletras ISO
+          </button>
+          <button onclick="switchView('chatbot')" id="tab-chatbot"
+                  class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition text-white/90 hover:bg-white/15">
+            <i class="fa-solid fa-robot"></i> 4. Chatbot Auditor (+60 Preguntas)
+          </button>
+          <button onclick="switchView('checklist')" id="tab-checklist"
+                  class="nav-tab px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition text-white/90 hover:bg-white/15">
+            <i class="fa-solid fa-clipboard-check"></i> 5. Checklist Auditoría
+          </button>
+        </div>
+
+        <!-- Botón Compacto para desplegar Guía Oficial Rápida -->
+        <button onclick="toggleQuickGuide()"
+                class="px-3 py-1.5 rounded-xl bg-slate-900/30 hover:bg-slate-900/50 border border-white/25 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition">
+          <i class="fa-solid fa-book-open text-amber-300"></i>
+          <span>Guía Oficial 2026</span>
+          <i id="guide-chevron" class="fa-solid fa-chevron-down text-[10px]"></i>
+        </button>
+      </div>
+    </nav>
+
+    <!-- GUÍA OFICIAL COMPACTA Y COLAPSABLE (SECUNDARIA Y DISCRETA) -->
+    <div id="quick-guide-drawer" class="hidden bg-slate-900 text-slate-100 border-b border-slate-700 px-4 py-3 text-xs">
+      <div class="max-w-[1440px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div class="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700">
+          <div class="font-extrabold text-[#38BDF8] mb-1"><i class="fa-solid fa-award mr-1"></i>ISO 9001:2026 (Calidad)</div>
+          <p class="text-slate-300 leading-relaxed">Cap. 5: Liderazgo (5.1.1), Enfoque al cliente (5.1.2), Política (5.2), Roles (5.3). Novedades 2026: Transformación digital, gestión de datos, resiliencia operativa y cultura de calidad.</p>
+        </div>
+        <div class="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700">
+          <div class="font-extrabold text-emerald-400 mb-1"><i class="fa-solid fa-leaf mr-1"></i>ISO 14001:2026 (Ambiental)</div>
+          <p class="text-slate-300 leading-relaxed">Cap. 5: Liderazgo (5.1), Política ambiental (5.2), Roles (5.3). Novedades 2026: Acción frente al cambio climático, biodiversidad, economía circular y cadena de valor sostenible.</p>
+        </div>
+        <div class="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700">
+          <div class="font-extrabold text-rose-400 mb-1"><i class="fa-solid fa-helmet-safety mr-1"></i>ISO 45001:2026 (SST)</div>
+          <p class="text-slate-300 leading-relaxed">Cap. 5: Liderazgo (5.1), Política SST (5.2), Roles (5.3), Consulta y participación sin barreras (5.4). Novedades 2026: Bienestar integral, salud mental, riesgos psicosociales y trabajo híbrido/digital.</p>
+        </div>
+        <div class="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700">
+          <div class="font-extrabold text-amber-300 mb-1"><i class="fa-solid fa-magnifying-glass mr-1"></i>Reglas de Oro del Auditor</div>
+          <p class="text-slate-300 leading-relaxed">1) Auditar es contrastar documentos, entrevistas y observación. 2) No Conformidad = Evidencia + Requisito + Brecha. 3) Si falta evidencia, ampliar la muestra antes de concluir.</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL AMPLIO + ASISTENTE COSAPIN -->
+  <main class="flex-1 max-w-[1440px] w-full mx-auto px-3 sm:px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+    <!-- ÁREA DE JUEGO / HERRAMIENTAS (10 COLUMNAS EN DESKTOP PARA MÁXIMO ESPACIO) -->
+    <section class="lg:col-span-9 xl:col-span-10 w-full">
+
+      <!-- ===================================================================== -->
+      <!-- VISTA 1: PASAPALABRAS - ROSCO TRINORMA 2026                           -->
+      <!-- ===================================================================== -->
+      <div id="view-rosco" class="view-section bg-white rounded-3xl shadow-md border border-slate-200/80 p-4 sm:p-6">
+        <!-- Encabezado y Filtros del Rosco -->
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <span class="text-xs font-extrabold uppercase tracking-wider text-[#0096D6] bg-[#E6F4FA] px-3 py-1 rounded-full">
+              Juego Interactivo · A–Z
+            </span>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-800 mt-1">Rosco Pasapalabras Trinorma 2026</h2>
+          </div>
+
+          <!-- Filtros combinables para múltiples roscos -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full xl:w-auto">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Norma ISO 2026</label>
+              <select id="rosco-filter-iso" onchange="RoscoGame.init()"
+                      class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:border-[#0096D6] focus:outline-none">
+                <option value="ALL">Trinorma Integrada (Todas)</option>
+                <option value="9001">ISO 9001:2026 (Calidad)</option>
+                <option value="14001">ISO 14001:2026 (Ambiental)</option>
+                <option value="45001">ISO 45001:2026 (SST)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Capítulo / Enfoque</label>
+              <select id="rosco-filter-chapter" onchange="RoscoGame.init()"
+                      class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:border-[#0096D6] focus:outline-none">
+                <option value="ALL">Todos los Capítulos</option>
+                <option value="CAP4">Cap. 4: Contexto y Cambio Climático</option>
+                <option value="CAP5">Cap. 5: Liderazgo, Política y Participación</option>
+                <option value="CAP67">Cap. 6 y 7: Riesgos, IPERC y Apoyo</option>
+                <option value="CAP810">Cap. 8 al 10: Auditoría, NC y Mejora</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Nivel de Dificultad</label>
+              <select id="rosco-filter-level" onchange="RoscoGame.init()"
+                      class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:border-[#0096D6] focus:outline-none">
+                <option value="FACIL">Nivel 1: Fácil (Conceptos Base)</option>
+                <option value="INTERMEDIO">Nivel 2: Intermedio (Auditoría)</option>
+                <option value="AVANZADO">Nivel 3: Avanzado (Trinorma 2026)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cuerpo Principal del Rosco -->
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-center mt-5">
+          <!-- Círculo del Rosco -->
+          <div class="xl:col-span-6 flex flex-col items-center justify-center">
+            <div class="rosco-container" id="rosco-wheel">
+              <!-- Centro del Rosco con COSAPIN y marcadores -->
+              <div class="absolute inset-0 m-auto w-44 h-44 sm:w-56 sm:h-56 rounded-full bg-gradient-to-b from-[#E6F4FA] to-white border-4 border-[#0096D6]/30 shadow-inner flex flex-col items-center justify-center p-3 text-center">
+                <img src="COSAPIN.jpg" alt="COSAPIN Centro" class="h-20 sm:h-24 w-auto object-contain mb-1"
+                     onerror="this.style.display='none'">
+                <div class="flex items-center gap-3 text-xs font-black">
+                  <span class="text-emerald-600"><i class="fa-solid fa-check-circle"></i> <span id="rosco-score-ok">0</span></span>
+                  <span class="text-rose-600"><i class="fa-solid fa-times-circle"></i> <span id="rosco-score-err">0</span></span>
+                  <span class="text-[#0077B6]"><i class="fa-solid fa-clock"></i> <span id="rosco-timer">180</span>s</span>
+                </div>
+                <span id="rosco-active-badge" class="mt-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#0096D6] text-white">
+                  Trinorma 2026
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel de Pregunta, Pistas y Respuesta -->
+          <div class="xl:col-span-6 flex flex-col gap-4">
+            <div class="bg-gradient-to-br from-slate-50 to-[#E6F4FA]/60 border-2 border-[#0096D6]/25 rounded-2xl p-5 shadow-sm">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                  <span id="rosco-current-letter-pill" class="w-10 h-10 rounded-xl bg-[#0096D6] text-white font-black text-xl flex items-center justify-center shadow">
+                    A
+                  </span>
+                  <div>
+                    <div id="rosco-starts-with" class="text-xs font-extrabold uppercase tracking-wider text-[#0077B6]">
+                      Empieza por A
+                    </div>
+                    <div id="rosco-meta-tags" class="text-[11px] font-semibold text-slate-500">
+                      ISO 9001:2026 · Cap. 5
+                    </div>
+                  </div>
+                </div>
+                <button onclick="RoscoGame.giveHint()"
+                        class="px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 text-xs font-extrabold flex items-center gap-1.5 transition">
+                  <i class="fa-solid fa-lightbulb text-amber-500"></i> Pedir Pista a COSAPIN
+                </button>
+              </div>
+
+              <!-- Definición -->
+              <p id="rosco-definition" class="text-base sm:text-lg font-bold text-slate-800 leading-relaxed min-h-[76px]">
+                Cargando definición...
+              </p>
+
+              <!-- Caja de Pista Revelada -->
+              <div id="rosco-hint-box" class="hidden mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-900 flex items-start gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-500 mt-0.5"></i>
+                <span id="rosco-hint-text"></span>
+              </div>
+
+              <!-- Feedback inmediato -->
+              <div id="rosco-feedback" class="hidden mt-3 p-3 rounded-xl text-xs font-bold"></div>
+            </div>
+
+            <!-- Controles de Entrada -->
+            <div class="flex flex-col sm:flex-row gap-2.5">
+              <input id="rosco-input" type="text" autocomplete="off" placeholder="Escribe tu respuesta aquí..."
+                     onkeydown="if(event.key==='Enter') RoscoGame.submitAnswer()"
+                     class="flex-1 bg-white border-2 border-slate-300 focus:border-[#0096D6] rounded-2xl px-4 py-3 text-base font-bold text-slate-800 focus:outline-none shadow-sm" />
+              <button onclick="RoscoGame.submitAnswer()"
+                      class="px-5 py-3 rounded-2xl bg-[#0096D6] hover:bg-[#0077B6] text-white font-extrabold text-sm shadow-md transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-paper-plane"></i> Responder
+              </button>
+              <button onclick="RoscoGame.passTurn()"
+                      class="px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-sm shadow-md transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-forward"></i> Pasapalabra
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+              <span><i class="fa-solid fa-keyboard mr-1"></i>Presiona <strong>Enter</strong> para validar rápido.</span>
+              <button onclick="RoscoGame.init()" class="text-[#0077B6] hover:underline font-bold">
+                <i class="fa-solid fa-rotate-right mr-1"></i>Reiniciar Rosco Nuevo
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- VISTA 2: DESAFÍO TRINORMA 2026 (ADIVINA LA RESPUESTA Y NIVEL FINAL)   -->
+      <!-- ===================================================================== -->
+      <div id="view-trivia" class="view-section hidden bg-white rounded-3xl shadow-md border border-slate-200/80 p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <span class="text-xs font-extrabold uppercase tracking-wider text-rose-600 bg-rose-50 px-3 py-1 rounded-full">
+              Simulador de Decisiones de Auditoría
+            </span>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-800 mt-1">Desafío Trinorma 2026: ¿Cuál es la Respuesta Correcta?</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="trivia-count-select" onchange="TriviaGame.start()"
+                    class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-700">
+              <option value="10">Reto Rápido (10 Preguntas)</option>
+              <option value="15" selected>Reto Auditor (15 Preguntas)</option>
+              <option value="20">Reto Líder Trinorma (20 Preguntas)</option>
+            </select>
+            <button onclick="TriviaGame.start()"
+                    class="px-3.5 py-2 rounded-xl bg-[#0096D6] hover:bg-[#0077B6] text-white text-xs font-extrabold transition">
+              <i class="fa-solid fa-rotate-right mr-1"></i>Reiniciar
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenedor activo de pregunta Trivia -->
+        <div id="trivia-play-area" class="mt-5">
+          <!-- Barra de progreso -->
+          <div class="flex items-center justify-between text-xs font-extrabold text-slate-600 mb-2">
+            <span>Pregunta <span id="trivia-q-num" class="text-[#0096D6]">1</span> de <span id="trivia-q-total">15</span></span>
+            <span class="bg-[#E6F4FA] text-[#0077B6] px-3 py-1 rounded-full">Puntaje: <span id="trivia-score">0</span> pts</span>
+          </div>
+          <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mb-5">
+            <div id="trivia-progress-bar" class="bg-gradient-to-r from-[#0096D6] to-[#38BDF8] h-full transition-all duration-300" style="width: 6%"></div>
+          </div>
+
+          <!-- Tarjeta de Caso Práctico -->
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-4">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span id="trivia-iso-badge" class="px-2.5 py-0.5 rounded-lg text-xs font-extrabold bg-[#0096D6] text-white">ISO 45001:2026</span>
+              <span id="trivia-clause-badge" class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-200 text-slate-700">Cláusula 5.4</span>
+            </div>
+            <h3 id="trivia-question-text" class="text-base sm:text-lg font-extrabold text-slate-800 leading-snug">
+              Cargando caso de auditoría...
+            </h3>
+          </div>
+
+          <!-- Opciones múltiples -->
+          <div id="trivia-options" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+
+          <!-- Explicación normativa post-respuesta -->
+          <div id="trivia-explanation-box" class="hidden mt-4 p-4 rounded-2xl border-2">
+            <div id="trivia-explanation-title" class="font-black text-sm mb-1"></div>
+            <p id="trivia-explanation-text" class="text-xs sm:text-sm leading-relaxed"></p>
+            <div class="mt-3 flex justify-end">
+              <button onclick="TriviaGame.nextQuestion()"
+                      class="px-5 py-2.5 rounded-xl bg-[#0096D6] hover:bg-[#0077B6] text-white text-xs sm:text-sm font-extrabold shadow transition">
+                Siguiente Caso <i class="fa-solid fa-arrow-right ml-1"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pantalla Final de Nivel Alcanzado -->
+        <div id="trivia-result-area" class="hidden mt-6 text-center bg-gradient-to-b from-[#E6F4FA] to-white border-2 border-[#0096D6]/30 rounded-3xl p-6 sm:p-10">
+          <div id="trivia-medal-icon" class="w-20 h-20 mx-auto rounded-full bg-[#0096D6] text-white flex items-center justify-center text-4xl shadow-lg mb-4">
+            <i class="fa-solid fa-award"></i>
+          </div>
+          <span class="text-xs font-extrabold uppercase tracking-widest text-[#0077B6]">Evaluación Completada</span>
+          <h3 id="trivia-rank-title" class="text-2xl sm:text-3xl font-black text-slate-800 mt-1">Auditor Líder Trinorma 2026</h3>
+          <p id="trivia-rank-desc" class="text-sm text-slate-600 max-w-xl mx-auto mt-2"></p>
+
+          <div class="grid grid-cols-3 gap-3 max-w-md mx-auto my-6">
+            <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm">
+              <div class="text-xs text-slate-500 font-bold">Aciertos</div>
+              <div id="trivia-final-hits" class="text-xl font-black text-emerald-600">0/15</div>
+            </div>
+            <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm">
+              <div class="text-xs text-slate-500 font-bold">Efectividad</div>
+              <div id="trivia-final-pct" class="text-xl font-black text-[#0096D6]">0%</div>
+            </div>
+            <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm">
+              <div class="text-xs text-slate-500 font-bold">Puntaje</div>
+              <div id="trivia-final-pts" class="text-xl font-black text-amber-600">0</div>
+            </div>
+          </div>
+
+          <button onclick="TriviaGame.start()"
+                  class="px-6 py-3 rounded-2xl bg-[#0096D6] hover:bg-[#0077B6] text-white font-extrabold text-sm shadow-md transition">
+            <i class="fa-solid fa-rotate-right mr-2"></i>Volver a Intentar y Subir de Nivel
+          </button>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- VISTA 3: PUPILETRAS DE LAS 3 ISOS POR NIVELES                         -->
+      <!-- ===================================================================== -->
+      <div id="view-pupiletras" class="view-section hidden bg-white rounded-3xl shadow-md border border-slate-200/80 p-4 sm:p-6">
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">
+              Agudeza Visual de Auditoría
+            </span>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-800 mt-1">Pupiletras Trinorma ISO 2026</h2>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <select id="ws-filter-iso" onchange="WordSearchGame.init()"
+                    class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-700">
+              <option value="ALL">Trinorma Integrada (9001/14001/45001)</option>
+              <option value="9001">ISO 9001:2026 (Calidad)</option>
+              <option value="14001">ISO 14001:2026 (Ambiental)</option>
+              <option value="45001">ISO 45001:2026 (SST)</option>
+            </select>
+            <select id="ws-filter-level" onchange="WordSearchGame.init()"
+                    class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-700">
+              <option value="FACIL">Nivel Fácil (10×10 · 8 palabras)</option>
+              <option value="INTERMEDIO" selected>Nivel Intermedio (13×13 · 12 palabras)</option>
+              <option value="AVANZADO">Nivel Avanzado (15×15 · 15 palabras)</option>
+            </select>
+            <button onclick="WordSearchGame.hint()"
+                    class="px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 text-xs font-extrabold transition">
+              <i class="fa-solid fa-eye mr-1"></i>Pista Visual
+            </button>
+            <button onclick="WordSearchGame.init()"
+                    class="px-3.5 py-2 rounded-xl bg-[#0096D6] hover:bg-[#0077B6] text-white text-xs font-extrabold transition">
+              <i class="fa-solid fa-shuffle mr-1"></i>Nuevo Tablero
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-5 items-start">
+          <!-- Cuadrícula Interactivo -->
+          <div class="xl:col-span-7 flex flex-col items-center">
+            <p class="text-xs text-slate-500 font-semibold mb-2">
+              <i class="fa-solid fa-hand-pointer text-[#0096D6] mr-1"></i>
+              Arrastra desde la primera hasta la última letra (o haz clic en inicio y luego en fin).
+            </p>
+            <div id="ws-grid" class="grid gap-1 bg-slate-100 p-2.5 rounded-2xl border-2 border-slate-200 shadow-inner select-none"></div>
+          </div>
+
+          <!-- Lista de Palabras y Concepto Aprendido -->
+          <div class="xl:col-span-5 bg-slate-50 rounded-2xl border border-slate-200 p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-black text-slate-800 uppercase tracking-wide">
+                Términos a Localizar (<span id="ws-found-count" class="text-[#0096D6]">0</span>/<span id="ws-total-count">0</span>)
+              </h3>
+              <span id="ws-complete-badge" class="hidden px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-extrabold">
+                ¡Completado!
+              </span>
+            </div>
+            <div id="ws-word-list" class="grid grid-cols-2 gap-2 mb-4"></div>
+
+            <!-- Tarjeta de significado de última palabra encontrada -->
+            <div id="ws-meaning-card" class="bg-white border border-[#0096D6]/30 rounded-xl p-3 text-xs">
+              <div class="font-extrabold text-[#0077B6] mb-1"><i class="fa-solid fa-circle-info mr-1"></i>Concepto Trinorma 2026</div>
+              <p id="ws-meaning-text" class="text-slate-600">Encuentra una palabra en el tablero para ver su aplicación en auditoría integrada.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- VISTA 4: CHATBOT AUDITOR COSAPIN (+60 PREGUNTAS DE AUDITORÍA)         -->
+      <!-- ===================================================================== -->
+      <div id="view-chatbot" class="view-section hidden bg-white rounded-3xl shadow-md border border-slate-200/80 p-4 sm:p-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div>
+            <span class="text-xs font-extrabold uppercase tracking-wider text-[#0096D6] bg-[#E6F4FA] px-3 py-1 rounded-full">
+              Asistente Experto en Auditoría Integrada
+            </span>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-800 mt-1">Chatbot Auditor COSAPIN: Banco de +60 Preguntas Clave</h2>
+          </div>
+
+          <!-- Filtro por ISO en Chatbot -->
+          <div class="flex flex-wrap gap-1.5">
+            <button onclick="AuditorChatbot.setFilter('ALL')" id="cb-filter-ALL"
+                    class="cb-filter-btn px-3 py-1.5 rounded-xl text-xs font-extrabold bg-[#0096D6] text-white transition">
+              Todas las ISO (64)
+            </button>
+            <button onclick="AuditorChatbot.setFilter('9001')" id="cb-filter-9001"
+                    class="cb-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+              ISO 9001:2026
+            </button>
+            <button onclick="AuditorChatbot.setFilter('14001')" id="cb-filter-14001"
+                    class="cb-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+              ISO 14001:2026
+            </button>
+            <button onclick="AuditorChatbot.setFilter('45001')" id="cb-filter-45001"
+                    class="cb-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+              ISO 45001:2026
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 mt-4">
+          <!-- Columna Izquierda: Banco de +60 Preguntas con Buscador -->
+          <div class="xl:col-span-5 bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col h-[540px]">
+            <div class="relative mb-2.5">
+              <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-xs"></i>
+              <input id="cb-search-input" type="text" oninput="AuditorChatbot.renderQuestions()"
+                     placeholder="Buscar pregunta (ej. política, 5.4, IPERC, clima, NC)..."
+                     class="w-full bg-white border border-slate-300 rounded-xl pl-8 pr-3 py-2 text-xs font-semibold focus:border-[#0096D6] focus:outline-none" />
+            </div>
+            <div class="text-[11px] font-bold text-slate-500 mb-2 flex justify-between">
+              <span>Haz clic en una pregunta para auditarla:</span>
+              <span id="cb-question-counter" class="text-[#0077B6]">64 preguntas</span>
+            </div>
+            <div id="cb-questions-list" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+          </div>
+
+          <!-- Columna Derecha: Conversación Interactiva con COSAPIN -->
+          <div class="xl:col-span-7 bg-gradient-to-b from-[#E6F4FA]/50 to-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col h-[540px]">
+            <!-- Cabecera del Chat -->
+            <div class="flex items-center gap-3 pb-3 border-b border-slate-200">
+              <div class="w-11 h-11 rounded-xl bg-white border border-[#0096D6]/30 flex items-center justify-center p-1 shadow-sm">
+                <img src="COSAPIN.jpg" alt="COSAPIN Chat" class="h-full w-auto object-contain" onerror="this.style.display='none'">
+              </div>
+              <div>
+                <div class="text-sm font-black text-slate-800 flex items-center gap-2">
+                  COSAPIN · Auditor Líder Trinorma
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                </div>
+                <div class="text-xs text-slate-500">Te indico qué comprobar, qué evidencia pedir y cuándo es No Conformidad.</div>
+              </div>
+            </div>
+
+            <!-- Mensajes -->
+            <div id="cb-messages" class="flex-1 overflow-y-auto py-3 space-y-3 pr-1"></div>
+
+            <!-- Input libre -->
+            <div class="pt-2 border-t border-slate-200 flex gap-2">
+              <input id="cb-user-input" type="text" placeholder="Escribe tu consulta de auditoría (ej. ¿Cómo audito la cláusula 5.4?)..."
+                     onkeydown="if(event.key==='Enter') AuditorChatbot.sendFreeText()"
+                     class="flex-1 bg-white border border-slate-300 focus:border-[#0096D6] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-medium focus:outline-none" />
+              <button onclick="AuditorChatbot.sendFreeText()"
+                      class="px-4 py-2.5 rounded-xl bg-[#0096D6] hover:bg-[#0077B6] text-white font-extrabold text-xs sm:text-sm transition shadow">
+                <i class="fa-solid fa-paper-plane"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- VISTA 5: CHECKLIST DE AUDITORÍA INTEGRADA (EDITABLE Y EXPORTABLE)     -->
+      <!-- ===================================================================== -->
+      <div id="view-checklist" class="view-section hidden bg-white rounded-3xl shadow-md border border-slate-200/80 p-4 sm:p-6">
+        <div id="print-area">
+          <!-- Encabezado Corporativo del Checklist -->
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+            <div>
+              <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">
+                Herramienta de Campo COSAPI
+              </span>
+              <h2 class="text-xl sm:text-2xl font-black text-slate-800 mt-1">Checklist de Auditoría Integrada Trinorma 2026</h2>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 no-print">
+              <button onclick="ChecklistApp.saveToStorage(true)"
+                      class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow transition flex items-center gap-1.5">
+                <i class="fa-solid fa-floppy-disk"></i> Guardar Progreso
+              </button>
+              <button onclick="ChecklistApp.exportCSV()"
+                      class="px-3.5 py-2 rounded-xl bg-[#0096D6] hover:bg-[#0077B6] text-white text-xs font-extrabold shadow transition flex items-center gap-1.5">
+                <i class="fa-solid fa-file-excel"></i> Descargar Excel/CSV
+              </button>
+              <button onclick="window.print()"
+                      class="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white text-xs font-extrabold shadow transition flex items-center gap-1.5">
+                <i class="fa-solid fa-print"></i> Imprimir / PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- Datos de la Empresa / Proyecto Auditado -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 mt-4">
+            <div>
+              <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Empresa / Proyecto Auditado</label>
+              <input id="ck-company" type="text" value="Proyecto Infraestructura Vial COSAPI" onchange="ChecklistApp.saveToStorage(false)"
+                     class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800">
+            </div>
+            <div>
+              <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Proceso / Área Auditada</label>
+              <input id="ck-process" type="text" value="Alta Dirección, SSOMA y Operaciones" onchange="ChecklistApp.saveToStorage(false)"
+                     class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800">
+            </div>
+            <div>
+              <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Auditor Líder / Equipo</label>
+              <input id="ck-auditor" type="text" value="Equipo Auditor COSAPI" onchange="ChecklistApp.saveToStorage(false)"
+                     class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800">
+            </div>
+            <div>
+              <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Fecha de Auditoría</label>
+              <input id="ck-date" type="date" onchange="ChecklistApp.saveToStorage(false)"
+                     class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800">
+            </div>
+          </div>
+
+          <!-- PANEL DE INDICADORES DE CUMPLIMIENTO EN TIEMPO REAL -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4">
+            <div class="bg-gradient-to-br from-[#0077B6] to-[#0096D6] text-white rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+              <div class="text-xs font-bold uppercase opacity-90">Cumplimiento Global Trinorma</div>
+              <div class="flex items-end justify-between mt-2">
+                <span id="ck-kpi-global" class="text-3xl font-black">0%</span>
+                <span id="ck-kpi-counts" class="text-xs font-semibold bg-white/20 px-2.5 py-1 rounded-lg">0 C · 0 NC · 0 OBS</span>
+              </div>
+              <div class="w-full bg-black/20 h-2 rounded-full mt-2 overflow-hidden">
+                <div id="ck-bar-global" class="bg-white h-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+              <div class="flex justify-between items-center text-xs font-extrabold text-[#0077B6]">
+                <span>ISO 9001:2026 (Calidad)</span>
+                <span id="ck-kpi-9001">0%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full mt-2 overflow-hidden">
+                <div id="ck-bar-9001" class="bg-[#0096D6] h-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-2">Liderazgo, enfoque cliente y digitalización.</p>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+              <div class="flex justify-between items-center text-xs font-extrabold text-emerald-700">
+                <span>ISO 14001:2026 (Ambiental)</span>
+                <span id="ck-kpi-14001">0%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full mt-2 overflow-hidden">
+                <div id="ck-bar-14001" class="bg-emerald-500 h-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-2">Aspectos significativos y acción climática.</p>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+              <div class="flex justify-between items-center text-xs font-extrabold text-rose-700">
+                <span>ISO 45001:2026 (SST)</span>
+                <span id="ck-kpi-45001">0%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full mt-2 overflow-hidden">
+                <div id="ck-bar-45001" class="bg-rose-600 h-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-2">Cero accidentes, consulta 5.4 y psicosocial.</p>
+            </div>
+          </div>
+
+          <!-- Filtros de Norma y Formulario para Agregar Nuevo Ítem -->
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mt-5 pb-3 border-b border-slate-200 no-print">
+            <div class="flex flex-wrap gap-1.5">
+              <button onclick="ChecklistApp.setFilter('ALL')" id="ck-tab-ALL"
+                      class="ck-filter-btn px-3.5 py-2 rounded-xl text-xs font-extrabold bg-[#0096D6] text-white">
+                Checklist Completo (Todas)
+              </button>
+              <button onclick="ChecklistApp.setFilter('9001')" id="ck-tab-9001"
+                      class="ck-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+                ISO 9001:2026
+              </button>
+              <button onclick="ChecklistApp.setFilter('14001')" id="ck-tab-14001"
+                      class="ck-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+                ISO 14001:2026
+              </button>
+              <button onclick="ChecklistApp.setFilter('45001')" id="ck-tab-45001"
+                      class="ck-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+                ISO 45001:2026
+              </button>
+            </div>
+
+            <button onclick="ChecklistApp.toggleAddForm()"
+                    class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold shadow transition flex items-center gap-1.5 self-start">
+              <i class="fa-solid fa-plus"></i> Agregar Ítem Personalizado
+            </button>
+          </div>
+
+          <!-- Formulario Desplegable para Agregar Ítem -->
+          <div id="ck-add-form" class="hidden bg-amber-50/80 border border-amber-200 rounded-2xl p-4 mt-3 no-print">
+            <h4 class="text-xs font-black uppercase text-amber-900 mb-2.5">Nuevo Requisito de Verificación</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+              <div class="sm:col-span-2">
+                <select id="ck-new-iso" class="w-full bg-white border border-amber-300 rounded-xl px-2.5 py-2 text-xs font-bold">
+                  <option value="9001">ISO 9001:2026</option>
+                  <option value="14001">ISO 14001:2026</option>
+                  <option value="45001">ISO 45001:2026</option>
+                </select>
+              </div>
+              <div class="sm:col-span-2">
+                <input id="ck-new-clause" type="text" placeholder="Cláusula (ej. 5.4)"
+                       class="w-full bg-white border border-amber-300 rounded-xl px-2.5 py-2 text-xs font-bold">
+              </div>
+              <div class="sm:col-span-4">
+                <input id="ck-new-req" type="text" placeholder="Pregunta / Requisito a verificar..."
+                       class="w-full bg-white border border-amber-300 rounded-xl px-2.5 py-2 text-xs font-semibold">
+              </div>
+              <div class="sm:col-span-3">
+                <input id="ck-new-ev" type="text" placeholder="Evidencia objetiva esperada..."
+                       class="w-full bg-white border border-amber-300 rounded-xl px-2.5 py-2 text-xs font-semibold">
+              </div>
+              <div class="sm:col-span-1">
+                <button onclick="ChecklistApp.addItem()"
+                        class="w-full h-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold">
+                  Añadir
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla Interactiva de Verificación -->
+          <div class="overflow-x-auto mt-4">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-100 text-slate-600 text-[11px] font-extrabold uppercase tracking-wider border-b border-slate-200">
+                  <th class="p-3 rounded-tl-xl">Norma / Cláusula</th>
+                  <th class="p-3">Requisito / Pregunta de Auditoría (Editable)</th>
+                  <th class="p-3">Evidencia Objetiva Esperada</th>
+                  <th class="p-3 text-center">Evaluación</th>
+                  <th class="p-3">Hallazgo / Evidencia Encontrada</th>
+                  <th class="p-3 rounded-tr-xl text-center no-print">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="ck-table-body" class="divide-y divide-slate-200 text-xs"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- COLUMNA LATERAL: MASCOTA COSAPIN CON VIDA Y CONSEJOS EN TIEMPO REAL   -->
+    <!-- ===================================================================== -->
+    <aside class="lg:col-span-3 xl:col-span-2 w-full lg:sticky lg:top-32 flex flex-col items-center">
+      <div class="w-full bg-white rounded-3xl shadow-md border-2 border-[#0096D6]/25 p-4 flex flex-col items-center text-center relative overflow-hidden">
+        <!-- Franja decorativa superior -->
+        <div class="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-[#0077B6] via-[#0096D6] to-[#DC2626]"></div>
+
+        <span class="mt-1 inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#E6F4FA] text-[#0077B6] text-[11px] font-extrabold uppercase tracking-wider">
+          <i class="fa-solid fa-headset"></i> Guía COSAPIN
+        </span>
+
+        <!-- Imagen de COSAPIN SIN alterar su forma ni recortar en círculo -->
+        <div class="my-2 w-full flex justify-center">
+          <img id="cosapin-avatar" src="COSAPIN.jpg" alt="COSAPIN Asistente Virtual"
+               class="cosapin-sprite w-36 sm:w-40 lg:w-full max-w-[190px] h-auto rounded-2xl"
+               onerror="this.onerror=null; this.src='https://placehold.co/200x250/E6F4FA/0077B6?text=COSAPIN';" />
+        </div>
+
+        <!-- Globo de diálogo dinámico -->
+        <div class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-left relative shadow-inner">
+          <div class="text-[10px] font-black uppercase text-[#0096D6] mb-1 flex items-center justify-between">
+            <span>Tip de Auditoría</span>
+            <button onclick="CosapinAssistant.randomTip()" title="Otro consejo de COSAPIN" class="text-slate-400 hover:text-[#0096D6]">
+              <i class="fa-solid fa-rotate"></i>
+            </button>
+          </div>
+          <p id="cosapin-speech" class="text-xs font-semibold text-slate-700 leading-relaxed">
+            ¡Hola! Soy COSAPIN. En una auditoría Trinorma 2026 recuerda: no basta con aprobar políticas, la alta dirección debe demostrar liderazgo visible y asignación real de recursos.
+          </p>
+        </div>
+
+        <!-- Lema Corporativo -->
+        <div class="mt-3 pt-2.5 border-t border-slate-100 w-full">
+          <p class="text-[10px] font-extrabold uppercase tracking-wider text-[#0077B6]">
+            Construimos confianza para transformar vidas
+          </p>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- Toast / Notificación flotante sin alert() -->
+  <div id="toast-banner" class="fixed bottom-5 right-5 z-50 hidden bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl text-xs font-bold flex items-center gap-2.5 border border-slate-700">
+    <i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+    <span id="toast-message">Acción realizada</span>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- LÓGICA COMPLETA: AUDIO SINTETIZADO + 5 VISTAS INTERACTIVAS              -->
+  <!-- ======================================================================= -->
+  <script>
+    /* -------------------------------------------------------------------------
+       1. UTILIDADES GENERALES Y ASISTENTE COSAPIN
+    ------------------------------------------------------------------------- */
+    function showToast(msg) {
+      const toast = document.getElementById('toast-banner');
+      document.getElementById('toast-message').textContent = msg;
+      toast.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => toast.classList.add('hidden'), 3200);
+    }
+
+    function toggleQuickGuide() {
+      const drawer = document.getElementById('quick-guide-drawer');
+      const chev = document.getElementById('guide-chevron');
+      drawer.classList.toggle('hidden');
+      chev.classList.toggle('fa-chevron-up');
+      chev.classList.toggle('fa-chevron-down');
+    }
+
+    const CosapinAssistant = {
+      tipsByView: {
+        rosco: [
+          "¡Vamos por ese Rosco! Si dudas en una letra, usa 'Pasapalabra' o pídeme una pista normativa.",
+          "Recuerda: en ISO 45001:2026 la cláusula 5.4 exige Consulta y Participación real de los trabajadores sin barreras.",
+          "En ISO 14001:2026 el cambio climático y la cadena de valor son claves desde el contexto hasta la operación."
+        ],
+        trivia: [
+          "Analiza cada caso como Auditor Líder: contrasta documentos, entrevistas y observación en campo.",
+          "Una No Conformidad bien redactada siempre tiene 3 elementos: Evidencia objetiva, Requisito incumplido y Brecha.",
+          "Si la evidencia en campo no es suficiente, ¡amplía la muestra antes de concluir!"
+        ],
+        pupiletras: [
+          "Agudiza tu ojo de auditor: busca términos clave como IPERC, EVIDENCIA, LIDERAZGO y TRAZABILIDAD.",
+          "Las palabras pueden estar en horizontal, vertical o diagonal. ¡Tú puedes encontrarlas todas!"
+        ],
+        chatbot: [
+          "Selecciona cualquiera de las +60 preguntas de auditoría o escríbeme tu duda sobre ISO 9001, 14001 o 45001:2026.",
+          "Pregunta a la alta dirección de forma directa y clara sobre recursos, riesgos y resultados revisados."
+        ],
+        checklist: [
+          "Evalúa cada requisito con objetividad y registra la evidencia exacta (código de acta, fecha, registro IPERC/ATS).",
+          "Puedes agregar tus propios ítems de verificación y descargar el reporte completo en Excel o PDF."
+        ]
+      },
+      say(text) {
+        const speech = document.getElementById('cosapin-speech');
+        const avatar = document.getElementById('cosapin-avatar');
+        speech.textContent = text;
+        avatar.classList.remove('talking');
+        void avatar.offsetWidth;
+        avatar.classList.add('talking');
+      },
+      randomTip() {
+        const currentView = window._activeView || 'rosco';
+        const list = this.tipsByView[currentView] || this.tipsByView.rosco;
+        const pick = list[Math.floor(Math.random() * list.length)];
+        this.say(pick);
+      }
+    };
+
+    function switchView(viewName) {
+      window._activeView = viewName;
+      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`view-${viewName}`).classList.remove('hidden');
+
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-[#0077B6]', 'font-extrabold', 'shadow-sm');
+        btn.classList.add('text-white/90', 'font-bold');
+      });
+      const activeBtn = document.getElementById(`tab-${viewName}`);
+      activeBtn.classList.remove('text-white/90', 'font-bold');
+      activeBtn.classList.add('bg-white', 'text-[#0077B6]', 'font-extrabold', 'shadow-sm');
+
+      CosapinAssistant.randomTip();
+      MusicEngine.playSfx('click');
+
+      // Cambiar automáticamente la pista predeterminada de la vista si la música está activa o seleccionada
+      const defaultTrackByView = {
+        rosco: 'elden_ring',
+        trivia: 'zelda_storms',
+        pupiletras: 'minecraft_sweden',
+        chatbot: 'chrono_corridors',
+        checklist: 'halo_theme'
+      };
+      const targetTrack = defaultTrackByView[viewName];
+      if (targetTrack) {
+        document.getElementById('music-selector').value = targetTrack;
+        MusicEngine.selectTrack(targetTrack, MusicEngine.isPlaying);
+      }
+    }
+
+    /* -------------------------------------------------------------------------
+       2. MOTOR MUSICAL POLIFÓNICO WEB AUDIO API (50+ CANCIONES ORIGINALES)
+    ------------------------------------------------------------------------- */
+    const MusicEngine = {
+      ctx: null,
+      isPlaying: false,
+      currentTrackId: 'elden_ring',
+      timerId: null,
+      stepIndex: 0,
+      volume: 0.25,
+
+      // Catálogo completo de 52 canciones organizadas por categoría
+      tracks: [
+        // 1. Destacado / Elden Ring
+        { id: 'elden_ring', cat: 'Épico Destacado', name: '1. Elden Ring – Main Theme (Tsukasa Saitoh)', tempo: 135, wave: 'sawtooth',
+          notes: [[330,2],[392,1],[494,3],[440,1],[392,1],[330,2],[294,2],[330,4],[330,2],[392,1],[494,2],[587,2],[523,2],[494,2],[440,4]] },
+        // Clásicos de Nintendo
+        { id: 'mario_overworld', cat: 'Clásicos de Nintendo', name: 'Super Mario Bros. (NES) – Overworld Theme', tempo: 185, wave: 'square',
+          notes: [[659,1],[659,1],[0,1],[659,1],[0,1],[523,1],[659,2],[784,2],[0,2],[392,2],[0,2],[523,2],[0,1],[392,2],[0,1],[330,2],[0,1],[440,1],[494,1],[466,1],[440,1]] },
+        { id: 'zelda_nes', cat: 'Clásicos de Nintendo', name: 'The Legend of Zelda (NES) – Main Theme', tempo: 150, wave: 'square',
+          notes: [[466,2],[349,3],[466,1],[466,1],[523,1],[587,1],[622,1],[698,4],[698,1],[698,1],[740,1],[831,1],[932,4]] },
+        { id: 'zelda_storms', cat: 'Clásicos de Nintendo', name: 'Zelda: Ocarina of Time – Song of Storms', tempo: 165, wave: 'triangle',
+          notes: [[294,1],[349,1],[587,3],[294,1],[349,1],[587,3],[659,2],[698,1],[659,1],[698,1],[659,1],[523,1],[440,3]] },
+        { id: 'zelda_gerudo', cat: 'Clásicos de Nintendo', name: 'Zelda: Ocarina of Time – Gerudo Valley', tempo: 160, wave: 'sawtooth',
+          notes: [[277,1],[330,1],[370,1],[415,3],[277,1],[330,1],[370,1],[415,3],[294,1],[349,1],[392,1],[440,3],[415,1],[370,1],[330,2]] },
+        { id: 'sonic_greenhill', cat: 'Clásicos de Nintendo / Sega', name: 'Sonic the Hedgehog – Green Hill Zone', tempo: 170, wave: 'square',
+          notes: [[523,2],[440,1],[523,2],[494,1],[523,2],[494,1],[392,3],[440,1],[698,2],[659,1],[523,2],[494,1],[523,2],[494,1],[392,3]] },
+        { id: 'dkc_aquatic', cat: 'Clásicos de Nintendo', name: 'Donkey Kong Country – Aquatic Ambience', tempo: 105, wave: 'sine',
+          notes: [[392,3],[494,3],[587,3],[740,3],[659,3],[587,3],[494,3],[440,3]] },
+        { id: 'dkc2_stickerbush', cat: 'Clásicos de Nintendo', name: 'Donkey Kong Country 2 – Stickerbush Symphony', tempo: 112, wave: 'triangle',
+          notes: [[330,2],[494,2],[659,2],[740,2],[784,3],[740,1],[659,2],[494,2],[392,4]] },
+        { id: 'kirby_gourmet', cat: 'Clásicos de Nintendo', name: 'Kirby Super Star – Gourmet Race', tempo: 195, wave: 'square',
+          notes: [[587,1],[659,1],[698,1],[784,1],[880,2],[698,2],[587,2],[880,2],[784,2],[698,2],[659,2],[587,2]] },
+        { id: 'pokemon_pallet', cat: 'Clásicos de Nintendo', name: 'Pokémon Rojo y Azul – Pallet Town', tempo: 120, wave: 'triangle',
+          notes: [[587,2],[523,1],[494,1],[440,2],[784,2],[659,1],[698,1],[659,2],[587,3],[494,1],[392,2],[440,1],[494,1],[523,3]] },
+        { id: 'pokemon_center', cat: 'Clásicos de Nintendo', name: 'Saga Pokémon – Pokémon Center', tempo: 145, wave: 'square',
+          notes: [[587,1],[440,1],[587,1],[880,2],[784,2],[740,1],[659,1],[587,1],[494,2],[523,1],[440,1],[523,1],[784,2],[740,2]] },
+
+        // RPG y Aventura Épica
+        { id: 'ff7_sephiroth', cat: 'RPG y Aventura Épica', name: 'Final Fantasy VII – One-Winged Angel', tempo: 155, wave: 'sawtooth',
+          notes: [[247,1],[262,1],[247,1],[262,1],[247,1],[262,1],[294,1],[262,1],[247,2],[196,2],[247,2],[262,2]] },
+        { id: 'ff7_aerith', cat: 'RPG y Aventura Épica', name: "Final Fantasy VII – Aerith's Theme", tempo: 100, wave: 'sine',
+          notes: [[587,2],[659,2],[740,3],[659,1],[587,2],[440,2],[494,3],[587,1],[494,2],[440,2],[370,4]] },
+        { id: 'ff10_zanarkand', cat: 'RPG y Aventura Épica', name: 'Final Fantasy X – To Zanarkand', tempo: 105, wave: 'sine',
+          notes: [[330,1],[494,1],[659,1],[740,1],[784,2],[740,2],[659,2],[587,2],[494,3],[330,1],[494,1],[659,1],[740,1],[784,2],[880,2]] },
+        { id: 'kh_dearly', cat: 'RPG y Aventura Épica', name: 'Kingdom Hearts – Dearly Beloved', tempo: 108, wave: 'sine',
+          notes: [[659,2],[587,2],[392,2],[349,2],[523,2],[494,2],[330,2],[294,2],[659,2],[587,2],[392,2],[440,2]] },
+        { id: 'kh_simple', cat: 'RPG y Aventura Épica', name: 'Kingdom Hearts – Simple and Clean', tempo: 138, wave: 'triangle',
+          notes: [[440,1],[523,1],[587,2],[523,1],[440,1],[392,2],[440,1],[523,1],[659,2],[587,2],[523,2]] },
+        { id: 'skyrim_dragonborn', cat: 'RPG y Aventura Épica', name: 'The Elder Scrolls V: Skyrim – Dragonborn', tempo: 130, wave: 'sawtooth',
+          notes: [[294,1],[330,1],[349,3],[294,1],[330,1],[349,3],[349,1],[392,1],[440,3],[392,1],[349,1],[330,2],[294,2]] },
+        { id: 'skyrim_secunda', cat: 'RPG y Aventura Épica', name: 'The Elder Scrolls V: Skyrim – Secunda', tempo: 95, wave: 'sine',
+          notes: [[440,3],[523,3],[659,3],[587,3],[494,3],[392,3],[440,4]] },
+        { id: 'witcher_geralt', cat: 'RPG y Aventura Épica', name: 'The Witcher 3 – Geralt of Rivia', tempo: 136, wave: 'sawtooth',
+          notes: [[220,2],[262,1],[294,1],[330,2],[294,1],[262,1],[220,2],[196,2],[220,3],[330,1],[392,2],[440,2]] },
+        { id: 'witcher_skellig', cat: 'RPG y Aventura Épica', name: 'The Witcher 3 – The Fields of Ard Skellig', tempo: 102, wave: 'sine',
+          notes: [[330,3],[494,2],[587,1],[659,3],[587,2],[494,1],[440,3],[392,3]] },
+        { id: 'chrono_corridors', cat: 'RPG y Aventura Épica', name: 'Chrono Trigger – Corridors of Time', tempo: 122, wave: 'triangle',
+          notes: [[494,1],[587,1],[740,2],[659,1],[587,1],[494,2],[440,1],[494,1],[587,2],[494,2],[370,2]] },
+
+        // Acción, Disparos y Ciencia Ficción
+        { id: 'halo_theme', cat: 'Acción y Ciencia Ficción', name: 'Halo: Combat Evolved – Halo Theme', tempo: 118, wave: 'sine',
+          notes: [[330,3],[370,1],[392,2],[370,1],[440,2],[392,1],[370,2],[330,4],[494,3],[587,1],[659,2],[587,1],[494,2],[440,3]] },
+        { id: 'doom_e1m1', cat: 'Acción y Ciencia Ficción', name: "Doom – E1M1 At Doom's Gate", tempo: 210, wave: 'sawtooth',
+          notes: [[165,1],[165,1],[330,1],[165,1],[165,1],[294,1],[165,1],[165,1],[262,1],[165,1],[165,1],[233,1],[165,1],[165,1],[247,1],[262,1]] },
+        { id: 'doom_bfg', cat: 'Acción y Ciencia Ficción', name: 'Doom (2016) – BFG Division', tempo: 160, wave: 'sawtooth',
+          notes: [[110,2],[110,1],[131,1],[110,2],[147,2],[110,2],[110,1],[131,1],[104,2],[98,2]] },
+        { id: 'mgs3_snake', cat: 'Acción y Ciencia Ficción', name: 'Metal Gear Solid 3 – Snake Eater', tempo: 115, wave: 'triangle',
+          notes: [[294,2],[349,2],[440,3],[415,1],[392,2],[349,2],[330,3],[294,3]] },
+        { id: 'mgs_best', cat: 'Acción y Ciencia Ficción', name: 'Metal Gear Solid – The Best Is Yet to Come', tempo: 104, wave: 'sine',
+          notes: [[392,2],[440,2],[494,3],[587,1],[494,2],[440,2],[392,3],[330,3]] },
+        { id: 'portal_still', cat: 'Acción y Ciencia Ficción', name: 'Portal – Still Alive', tempo: 132, wave: 'triangle',
+          notes: [[392,1],[370,1],[330,1],[330,1],[370,3],[392,1],[370,1],[330,1],[330,1],[370,2],[294,2]] },
+        { id: 'portal2_want', cat: 'Acción y Ciencia Ficción', name: 'Portal 2 – Want You Gone', tempo: 140, wave: 'square',
+          notes: [[440,1],[494,1],[523,2],[494,1],[440,1],[392,2],[330,1],[392,1],[440,2],[523,2]] },
+        { id: 'ac2_ezio', cat: 'Acción y Ciencia Ficción', name: "Assassin's Creed II – Ezio's Family", tempo: 118, wave: 'sine',
+          notes: [[220,2],[330,2],[440,2],[494,2],[523,2],[494,2],[440,2],[330,2],[262,2],[392,2],[523,2],[587,2]] },
+        { id: 'tlou_theme', cat: 'Acción y Ciencia Ficción', name: 'The Last of Us – Main Theme', tempo: 110, wave: 'triangle',
+          notes: [[330,2],[392,1],[494,2],[440,1],[392,2],[330,2],[294,2],[330,3]] },
+        { id: 'me2_suicide', cat: 'Acción y Ciencia Ficción', name: 'Mass Effect 2 – Suicide Mission', tempo: 152, wave: 'sawtooth',
+          notes: [[220,1],[220,1],[262,1],[220,1],[294,1],[220,1],[330,2],[294,1],[262,1],[247,2]] },
+
+        // Juegos Indie y Modernos
+        { id: 'undertale_megalo', cat: 'Indie y Modernos', name: 'Undertale – Megalovania', tempo: 215, wave: 'square',
+          notes: [[294,1],[294,1],[587,2],[440,2],[0,1],[415,1],[0,1],[392,1],[0,1],[349,2],[294,1],[349,1],[392,1]] },
+        { id: 'undertale_hopes', cat: 'Indie y Modernos', name: 'Undertale – Hopes and Dreams', tempo: 168, wave: 'square',
+          notes: [[587,2],[440,2],[392,2],[440,2],[587,2],[659,2],[587,2],[440,2]] },
+        { id: 'minecraft_sweden', cat: 'Indie y Modernos', name: 'Minecraft – Sweden (C418)', tempo: 92, wave: 'sine',
+          notes: [[330,3],[494,3],[659,3],[587,3],[494,3],[392,3],[440,4]] },
+        { id: 'minecraft_subwoofer', cat: 'Indie y Modernos', name: 'Minecraft – Subwoofer Lullaby', tempo: 96, wave: 'sine',
+          notes: [[392,3],[494,3],[587,3],[440,3],[349,3],[440,3],[523,4]] },
+        { id: 'hk_city', cat: 'Indie y Modernos', name: 'Hollow Knight – City of Tears', tempo: 100, wave: 'sine',
+          notes: [[330,2],[392,2],[494,3],[523,1],[494,2],[392,2],[370,3],[330,3]] },
+        { id: 'hk_sealed', cat: 'Indie y Modernos', name: 'Hollow Knight – Sealed Vessel', tempo: 138, wave: 'sawtooth',
+          notes: [[294,2],[349,2],[440,2],[466,2],[440,2],[349,2],[330,2],[294,2]] },
+        { id: 'civ4_baba', cat: 'Indie y Modernos', name: 'Civilization IV – Baba Yetu', tempo: 134, wave: 'triangle',
+          notes: [[392,1],[440,1],[494,2],[587,2],[494,1],[440,1],[392,2],[440,2],[494,3]] },
+        { id: 'dmc5_bury', cat: 'Indie y Modernos', name: 'Devil May Cry 5 – Bury the Light', tempo: 164, wave: 'sawtooth',
+          notes: [[330,1],[330,1],[392,2],[440,2],[494,2],[440,1],[392,1],[330,2],[294,2]] },
+        { id: 'cyberpunk_stay', cat: 'Indie y Modernos', name: 'Cyberpunk 2077 – I Really Want to Stay at Your House', tempo: 130, wave: 'triangle',
+          notes: [[440,1],[523,1],[659,2],[587,1],[523,1],[494,2],[440,2],[392,2]] },
+        { id: 'cuphead_floral', cat: 'Indie y Modernos', name: 'Cuphead – Floral Fury', tempo: 175, wave: 'square',
+          notes: [[330,1],[392,1],[440,1],[494,1],[523,2],[494,1],[440,1],[392,2],[330,2]] },
+
+        // Arcade y Lucha
+        { id: 'tetris_korobeiniki', cat: 'Arcade y Lucha', name: 'Tetris (Game Boy) – Korobeiniki / Korobushka', tempo: 165, wave: 'square',
+          notes: [[659,2],[494,1],[523,1],[587,2],[523,1],[494,1],[440,2],[440,1],[523,1],[659,2],[587,1],[523,1],[494,3],[523,1],[587,2],[659,2],[523,2],[440,2],[440,3]] },
+        { id: 'sf2_guile', cat: 'Arcade y Lucha', name: "Street Fighter II – Guile's Theme", tempo: 168, wave: 'sawtooth',
+          notes: [[523,2],[523,1],[494,1],[494,1],[523,3],[523,1],[494,1],[494,1],[523,3],[587,2],[523,1],[494,1],[392,2],[440,2]] },
+        { id: 'sf2_ryu', cat: 'Arcade y Lucha', name: "Street Fighter II – Ryu's Theme", tempo: 162, wave: 'square',
+          notes: [[330,2],[392,1],[440,2],[392,1],[330,2],[294,2],[330,3],[440,1],[494,2],[523,2]] },
+        { id: 'mk_techno', cat: 'Arcade y Lucha', name: 'Mortal Kombat – Techno Syndrome', tempo: 185, wave: 'sawtooth',
+          notes: [[220,1],[220,1],[262,1],[220,1],[294,1],[220,1],[330,1],[294,1],[262,1],[262,1],[330,1],[262,1],[392,1],[262,1],[330,1],[262,1]] },
+        { id: 'cv_vampire', cat: 'Arcade y Lucha', name: 'Castlevania – Vampire Killer', tempo: 165, wave: 'square',
+          notes: [[440,1],[494,1],[523,2],[494,1],[440,1],[415,2],[440,1],[494,1],[523,2],[587,2],[659,2]] },
+        { id: 'cv2_bloody', cat: 'Arcade y Lucha', name: 'Castlevania II – Bloody Tears', tempo: 160, wave: 'square',
+          notes: [[294,2],[349,1],[440,1],[587,2],[523,1],[494,1],[440,2],[392,1],[349,1],[330,3]] },
+        { id: 'mm2_wily', cat: 'Arcade y Lucha', name: 'Mega Man 2 – Opening / Dr. Wily Stage 1', tempo: 178, wave: 'square',
+          notes: [[330,1],[330,1],[330,1],[392,1],[440,2],[392,1],[330,1],[494,2],[440,1],[392,1],[440,3],[330,1],[330,1],[392,1],[440,2],[587,2]] }
+      ],
+
+      initUI() {
+        const sel = document.getElementById('music-selector');
+        const groups = {};
+        this.tracks.forEach(t => {
+          if (!groups[t.cat]) groups[t.cat] = [];
+          groups[t.cat].push(t);
+        });
+        sel.innerHTML = '';
+        Object.entries(groups).forEach(([cat, items]) => {
+          const optgroup = document.createElement('optgroup');
+          optgroup.label = cat;
+          items.forEach(track => {
+            const opt = document.createElement('option');
+            opt.value = track.id;
+            opt.textContent = track.name;
+            optgroup.appendChild(opt);
+          });
+          sel.appendChild(optgroup);
+        });
+      },
+
+      ensureContext() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+
+      setVolume(val) {
+        this.volume = (parseInt(val, 10) / 100) * 0.45;
+      },
+
+      selectTrack(trackId, autoPlay = true) {
+        this.currentTrackId = trackId;
+        this.stepIndex = 0;
+        if (autoPlay) {
+          this.start();
+        }
+      },
+
+      nextTrack() {
+        const idx = this.tracks.findIndex(t => t.id === this.currentTrackId);
+        const next = this.tracks[(idx + 1) % this.tracks.length];
+        document.getElementById('music-selector').value = next.id;
+        this.selectTrack(next.id, true);
+      },
+
+      togglePlay() {
+        if (this.isPlaying) {
+          this.stop();
+        } else {
+          this.start();
+        }
+      },
+
+      start() {
+        this.ensureContext();
+        this.stop(false);
+        this.isPlaying = true;
+        document.getElementById('music-play-icon').className = 'fa-solid fa-pause text-xs';
+        document.getElementById('music-status-badge').textContent = 'Sonando';
+        document.getElementById('music-status-badge').className = 'text-emerald-600 font-extrabold';
+        this.scheduleNextNote();
+      },
+
+      stop(updateUI = true) {
+        this.isPlaying = false;
+        clearTimeout(this.timerId);
+        if (updateUI) {
+          document.getElementById('music-play-icon').className = 'fa-solid fa-play text-xs';
+          document.getElementById('music-status-badge').textContent = 'Pausado';
+          document.getElementById('music-status-badge').className = 'text-slate-400';
+        }
+      },
+
+      scheduleNextNote() {
+        if (!this.isPlaying) return;
+        const track = this.tracks.find(t => t.id === this.currentTrackId) || this.tracks[0];
+        const [freq, beats] = track.notes[this.stepIndex % track.notes.length];
+        const stepMs = (60 / track.tempo) * 1000 * 0.5 * beats;
+
+        if (freq > 0 && this.volume > 0.005) {
+          this.playTone(freq, (stepMs / 1000) * 0.88, track.wave, this.volume);
+          // Bajo armónico sutil una octava abajo en tiempos fuertes
+          if (this.stepIndex % 2 === 0) {
+            this.playTone(freq * 0.5, (stepMs / 1000) * 0.9, 'triangle', this.volume * 0.45);
+          }
+        }
+
+        this.stepIndex++;
+        this.timerId = setTimeout(() => this.scheduleNextNote(), stepMs);
+      },
+
+      playTone(freq, durationSec, waveType = 'triangle', vol = 0.2) {
+        try {
+          this.ensureContext();
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = waveType;
+          osc.frequency.setValueAtTime(freq, now);
+
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.exponentialRampToValueAtTime(Math.max(0.002, vol), now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + Math.max(0.06, durationSec));
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + durationSec + 0.02);
+        } catch (e) {}
+      },
+
+      playSfx(type) {
+        try {
+          this.ensureContext();
+          if (type === 'ok') {
+            this.playTone(523.25, 0.11, 'triangle', 0.25);
+            setTimeout(() => this.playTone(659.25, 0.11, 'triangle', 0.25), 90);
+            setTimeout(() => this.playTone(783.99, 0.22, 'triangle', 0.28), 180);
+          } else if (type === 'err') {
+            this.playTone(220, 0.16, 'sawtooth', 0.22);
+            setTimeout(() => this.playTone(174.6, 0.26, 'sawtooth', 0.22), 140);
+          } else if (type === 'win') {
+            [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+              setTimeout(() => this.playTone(f, 0.22, 'square', 0.22), i * 110);
+            });
+          } else if (type === 'click') {
+            this.playTone(620, 0.05, 'sine', 0.12);
+          }
+        } catch (e) {}
+      }
+    };
+
+    /* -------------------------------------------------------------------------
+       3. VISTA 1: PASAPALABRAS - ROSCO TRINORMA 2026
+    ------------------------------------------------------------------------- */
+    const ROSCO_BANK = [
+      // Banco multi-norma, multi-capítulo y multi-nivel (A-Z)
+      { letter: 'A', mode: 'Empieza por', word: 'AUDITORIA', iso: 'ALL', cap: 'CAP810', level: 'FACIL',
+        def: 'Proceso sistemático, independiente y documentado para obtener evidencias objetivas y evaluar el cumplimiento de la Trinorma.',
+        hint: 'Empieza por AUDI... y termina en RIA (9 letras).' },
+      { letter: 'A', mode: 'Empieza por', word: 'ASPECTO', iso: '14001', cap: 'CAP67', level: 'INTERMEDIO',
+        def: 'Elemento de las actividades, productos o servicios de una organización que interactúa o puede interactuar con el medio ambiente.',
+        hint: 'En ISO 14001:2026 se evalúa si es significativo (7 letras).' },
+      { letter: 'B', mode: 'Empieza por', word: 'BRECHA', iso: 'ALL', cap: 'CAP810', level: 'INTERMEDIO',
+        def: 'Diferencia o incumplimiento detectado entre el requisito normativo aplicable y la evidencia encontrada durante la auditoría.',
+        hint: 'Junto con la evidencia y el requisito forma una No Conformidad (6 letras).' },
+      { letter: 'B', mode: 'Empieza por', word: 'BIENESTAR', iso: '45001', cap: 'CAP5', level: 'AVANZADO',
+        def: 'Enfoque reforzado en ISO 45001:2026 que integra la salud física, mental y psicosocial de las personas en el trabajo.',
+        hint: 'Sinónimo de salud integral y calidad de vida laboral (9 letras).' },
+      { letter: 'C', mode: 'Empieza por', word: 'CONSULTA', iso: '45001', cap: 'CAP5', level: 'FACIL',
+        def: 'Cláusula 5.4 de ISO 45001:2026: búsqueda de opiniones de los trabajadores antes de tomar decisiones de SST.',
+        hint: 'Va de la mano con la participación de los trabajadores (8 letras).' },
+      { letter: 'C', mode: 'Empieza por', word: 'CLIMATICO', iso: '14001', cap: 'CAP4', level: 'AVANZADO',
+        def: 'Cambio global cuya relevancia debe determinarse obligatoriamente en el contexto de la organización en las ediciones ISO 2026.',
+        hint: 'Adjetivo que acompaña a "Cambio..." (9 letras).' },
+      { letter: 'D', mode: 'Empieza por', word: 'DIRECCION', iso: 'ALL', cap: 'CAP5', level: 'FACIL',
+        def: 'Persona o grupo de personas que dirige y controla una organización al más alto nivel y asume el liderazgo de la Trinorma.',
+        hint: 'Alta... (9 letras).' },
+      { letter: 'D', mode: 'Empieza por', word: 'DIGITALIZACION', iso: '9001', cap: 'CAP810', level: 'AVANZADO',
+        def: 'Transformación tecnológica y gestión de datos incorporada en ISO 9001:2026 para asegurar trazabilidad y calidad del servicio.',
+        hint: 'Uso de herramientas digitales y plataformas como COSAPI Gestiona (14 letras).' },
+      { letter: 'E', mode: 'Empieza por', word: 'EVIDENCIA', iso: 'ALL', cap: 'CAP810', level: 'FACIL',
+        def: 'Registros, declaraciones de hechos o cualquier otra información pertinente y verificable que respalda un hallazgo de auditoría.',
+        hint: 'Sin ella objetiva no se puede sustentar una No Conformidad (9 letras).' },
+      { letter: 'E', mode: 'Empieza por', word: 'ENFOQUE', iso: '9001', cap: 'CAP5', level: 'INTERMEDIO',
+        def: 'Cláusula 5.1.2 de ISO 9001:2026: orientación de la alta dirección hacia el cliente para cumplir requisitos y aumentar su satisfacción.',
+        hint: '_______ al cliente (7 letras).' },
+      { letter: 'F', mode: 'Empieza por', word: 'FORMACION', iso: 'ALL', cap: 'CAP67', level: 'FACIL',
+        def: 'Acción de capacitación y toma de conciencia para asegurar que el personal sea competente en calidad, ambiente y SST.',
+        hint: 'Capacitación o entrenamiento del personal (9 letras).' },
+      { letter: 'G', mode: 'Empieza por', word: 'GESTION', iso: 'ALL', cap: 'CAP4', level: 'FACIL',
+        def: 'Actividades coordinadas para dirigir y controlar una organización en calidad, ambiente y seguridad.',
+        hint: 'Sistema Integrado de _______ (7 letras).' },
+      { letter: 'H', mode: 'Empieza por', word: 'HALLAZGO', iso: 'ALL', cap: 'CAP810', level: 'INTERMEDIO',
+        def: 'Resultado de la evaluación de la evidencia de auditoría recopilada frente a los criterios de auditoría.',
+        hint: 'Puede ser conformidad, observación o no conformidad (8 letras).' },
+      { letter: 'I', mode: 'Empieza por', word: 'IPERC', iso: '45001', cap: 'CAP67', level: 'FACIL',
+        def: 'Identificación de Peligros, Evaluación de Riesgos y Determinación de Controles donde participan activamente los trabajadores.',
+        hint: 'Sigla fundamental de seguridad en obra (5 letras).' },
+      { letter: 'I', mode: 'Empieza por', word: 'INTEGRIDAD', iso: 'ALL', cap: 'CAP5', level: 'INTERMEDIO',
+        def: 'Valor corporativo de COSAPI presente en nuestra meta: "Cero Accidentes con..." y en la ética del auditor.',
+        hint: 'Actuar con rectitud y honestidad (10 letras).' },
+      { letter: 'J', mode: 'Empieza por', word: 'JERARQUIA', iso: '45001', cap: 'CAP67', level: 'INTERMEDIO',
+        def: 'Orden de prioridad de controles en SST: eliminar el peligro, sustituir, controles de ingeniería, administrativos y EPP.',
+        hint: '_________ de controles (9 letras).' },
+      { letter: 'L', mode: 'Empieza por', word: 'LIDERAZGO', iso: 'ALL', cap: 'CAP5', level: 'FACIL',
+        def: 'Título del Capítulo 5 de la Trinorma 2026 donde la alta dirección demuestra compromiso visible y rinde cuentas.',
+        hint: 'Capítulo 5 de las tres normas ISO (9 letras).' },
+      { letter: 'M', mode: 'Empieza por', word: 'MEJORA', iso: 'ALL', cap: 'CAP810', level: 'FACIL',
+        def: 'Actividad recurrente para aumentar el desempeño del Sistema Integrado de Gestión (Capítulo 10).',
+        hint: '_______ continua (6 letras).' },
+      { letter: 'M', mode: 'Empieza por', word: 'MUESTRA', iso: 'ALL', cap: 'CAP810', level: 'AVANZADO',
+        def: 'Conjunto de registros o entrevistas seleccionadas en auditoría; si la evidencia no es suficiente, el auditor debe ampliarla.',
+        hint: 'Se amplía cuando el auditor necesita corroborar más información (7 letras).' },
+      { letter: 'N', mode: 'Empieza por', word: 'NO CONFORMIDAD', iso: 'ALL', cap: 'CAP810', level: 'FACIL',
+        def: 'Incumplimiento de un requisito normativo sustentado con evidencia objetiva y descripción clara de la brecha.',
+        hint: 'Dos palabras: NC en auditoría (2 + 11 letras).' },
+      { letter: 'O', mode: 'Empieza por', word: 'OBJETIVOS', iso: 'ALL', cap: 'CAP67', level: 'FACIL',
+        def: 'Resultados medibles que la organización planifica lograr en coherencia con las políticas de calidad, ambiente y SST.',
+        hint: 'Metas medibles del sistema de gestión (9 letras).' },
+      { letter: 'P', mode: 'Empieza por', word: 'POLITICA', iso: 'ALL', cap: 'CAP5', level: 'FACIL',
+        def: 'Cláusula 5.2: intenciones y dirección de una organización expresadas formalmente por su alta dirección.',
+        hint: 'Documento firmado por la alta dirección con compromisos obligatorios (8 letras).' },
+      { letter: 'P', mode: 'Empieza por', word: 'PSICOSOCIAL', iso: '45001', cap: 'CAP67', level: 'AVANZADO',
+        def: 'Tipo de factor de riesgo laboral relacionado con estrés, carga mental y organización del trabajo reforzado en ISO 45001:2026.',
+        hint: 'Riesgo relacionado con la salud mental y el entorno social (11 letras).' },
+      { letter: 'R', mode: 'Empieza por', word: 'RECURSOS', iso: 'ALL', cap: 'CAP5', level: 'FACIL',
+        def: 'Presupuesto, personal, tiempo e infraestructura que la alta dirección debe asegurar para que el sistema funcione.',
+        hint: 'Sin ellos la dirección no demuestra compromiso real (8 letras).' },
+      { letter: 'R', mode: 'Empieza por', word: 'REPRESALIAS', iso: '45001', cap: 'CAP5', level: 'INTERMEDIO',
+        def: 'Sanciones o actos negativos que la dirección debe evitar contra trabajadores que reportan peligros o incidentes.',
+        hint: 'Protección al trabajador que reporta condiciones inseguras (11 letras).' },
+      { letter: 'S', mode: 'Empieza por', word: 'SATISFACCION', iso: '9001', cap: 'CAP5', level: 'FACIL',
+        def: 'Percepción del cliente sobre el grado en que se han cumplido sus expectativas y requisitos contractuales.',
+        hint: 'Indicador clave del enfoque al cliente en ISO 9001:2026 (12 letras).' },
+      { letter: 'T', mode: 'Empieza por', word: 'TRABAJADORES', iso: '45001', cap: 'CAP5', level: 'FACIL',
+        def: 'Actores clave en ISO 45001:2026 cuya consulta y participación activa sin barreras es obligatoria en SST.',
+        hint: 'Personas que realizan actividades bajo el control de la organización (12 letras).' },
+      { letter: 'V', mode: 'Empieza por', word: 'VERSIONES', iso: 'ALL', cap: 'CAP67', level: 'INTERMEDIO',
+        def: 'Control documental que verifica el auditor para asegurar que la política o procedimiento sea vigente y no obsoleto.',
+        hint: 'Control de _________ de documentos (9 letras).' }
+    ];
+
+    const RoscoGame = {
+      items: [],
+      currentIndex: 0,
+      timer: 180,
+      intervalId: null,
+
+      init() {
+        clearInterval(this.intervalId);
+        const iso = document.getElementById('rosco-filter-iso').value;
+        const cap = document.getElementById('rosco-filter-chapter').value;
+        const lvl = document.getElementById('rosco-filter-level').value;
+
+        // Construir rosco único de 18 letras filtradas o combinadas para que siempre sea jugable y variado
+        const letters = ['A','B','C','D','E','F','G','H','I','J','L','M','N','O','P','R','S','T','V'];
+        this.items = letters.map(letChar => {
+          let candidates = ROSCO_BANK.filter(q => q.letter === letChar);
+          const strict = candidates.filter(q =>
+            (iso === 'ALL' || q.iso === iso || q.iso === 'ALL') &&
+            (cap === 'ALL' || q.cap === cap) &&
+            (q.level === lvl)
+          );
+          if (strict.length > 0) candidates = strict;
+          else {
+            const byIso = candidates.filter(q => iso === 'ALL' || q.iso === iso || q.iso === 'ALL');
+            if (byIso.length > 0) candidates = byIso;
+          }
+          const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+          return { ...chosen, status: 'pending' };
+        });
+
+        this.currentIndex = 0;
+        this.timer = lvl === 'FACIL' ? 240 : (lvl === 'INTERMEDIO' ? 180 : 140);
+        document.getElementById('rosco-timer').textContent = this.timer;
+        document.getElementById('rosco-active-badge').textContent =
+          `${iso === 'ALL' ? 'Trinorma' : 'ISO ' + iso} · ${lvl}`;
+
+        this.renderWheel();
+        this.loadCurrentQuestion();
+
+        this.intervalId = setInterval(() => {
+          if (window._activeView !== 'rosco') return;
+          this.timer--;
+          document.getElementById('rosco-timer').textContent = Math.max(0, this.timer);
+          if (this.timer <= 0) {
+            clearInterval(this.intervalId);
+            this.finishGame();
+          }
+        }, 1000);
+      },
+
+      renderWheel() {
+        const wheel = document.getElementById('rosco-wheel');
+        wheel.querySelectorAll('.rosco-letter').forEach(n => n.remove());
+        const total = this.items.length;
+        const radiusPct = 43;
+
+        this.items.forEach((item, idx) => {
+          const angle = (idx / total) * 2 * Math.PI - Math.PI / 2;
+          const x = 50 + radiusPct * Math.cos(angle);
+          const y = 50 + radiusPct * Math.sin(angle);
+
+          const el = document.createElement('div');
+          el.className = `rosco-letter ${idx === this.currentIndex ? 'active' : item.status}`;
+          el.style.left = `${x}%`;
+          el.style.top = `${y}%`;
+          el.textContent = item.letter;
+          el.title = `Letra ${item.letter}`;
+          el.onclick = () => {
+            if (item.status === 'pending' || item.status === 'passed') {
+              this.currentIndex = idx;
+              this.renderWheel();
+              this.loadCurrentQuestion();
+            }
+          };
+          wheel.appendChild(el);
+        });
+
+        const okCount = this.items.filter(i => i.status === 'correct').length;
+        const errCount = this.items.filter(i => i.status === 'wrong').length;
+        document.getElementById('rosco-score-ok').textContent = okCount;
+        document.getElementById('rosco-score-err').textContent = errCount;
+      },
+
+      loadCurrentQuestion() {
+        const item = this.items[this.currentIndex];
+        if (!item) return;
+        document.getElementById('rosco-current-letter-pill').textContent = item.letter;
+        document.getElementById('rosco-starts-with').textContent = `${item.mode} ${item.letter}`;
+        document.getElementById('rosco-meta-tags').textContent =
+          `${item.iso === 'ALL' ? 'Trinorma Integrada 2026' : 'ISO ' + item.iso + ':2026'} · Nivel ${item.level}`;
+        document.getElementById('rosco-definition').textContent = item.def;
+        document.getElementById('rosco-hint-box').classList.add('hidden');
+        document.getElementById('rosco-feedback').classList.add('hidden');
+        const input = document.getElementById('rosco-input');
+        input.value = '';
+        input.focus();
+      },
+
+      giveHint() {
+        const item = this.items[this.currentIndex];
+        const box = document.getElementById('rosco-hint-box');
+        document.getElementById('rosco-hint-text').textContent =
+          `${item.hint} (Iniciales: ${item.word.slice(0, 2)}...)`;
+        box.classList.remove('hidden');
+        CosapinAssistant.say(`Aquí tienes una pista para la letra ${item.letter}: ${item.hint}`);
+        MusicEngine.playSfx('click');
+      },
+
+      normalize(str) {
+        return str.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      },
+
+      submitAnswer() {
+        const item = this.items[this.currentIndex];
+        const userVal = this.normalize(document.getElementById('rosco-input').value);
+        if (!userVal) return;
+
+        const targetVal = this.normalize(item.word);
+        const fb = document.getElementById('rosco-feedback');
+        fb.classList.remove('hidden');
+
+        if (userVal === targetVal) {
+          item.status = 'correct';
+          fb.className = 'mt-3 p-3 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
+          fb.innerHTML = `<i class="fa-solid fa-check-circle mr-1"></i> ¡Correcto! La respuesta es <strong>${item.word}</strong>.`;
+          MusicEngine.playSfx('ok');
+          CosapinAssistant.say(`¡Excelente respuesta! "${item.word}" dominado con criterio de auditor.`);
+        } else {
+          item.status = 'wrong';
+          fb.className = 'mt-3 p-3 rounded-xl text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300';
+          fb.innerHTML = `<i class="fa-solid fa-circle-xmark mr-1"></i> Incorrecto. La palabra correcta era <strong>${item.word}</strong>.`;
+          MusicEngine.playSfx('err');
+          CosapinAssistant.say(`¡Casi! La respuesta correcta para la ${item.letter} era "${item.word}". Sigamos adelante.`);
+        }
+
+        this.renderWheel();
+        setTimeout(() => this.advanceToNext(), 1100);
+      },
+
+      passTurn() {
+        const item = this.items[this.currentIndex];
+        item.status = 'passed';
+        MusicEngine.playSfx('click');
+        this.renderWheel();
+        this.advanceToNext();
+      },
+
+      advanceToNext() {
+        const remaining = this.items.filter(i => i.status === 'pending' || i.status === 'passed');
+        if (remaining.length === 0) {
+          this.finishGame();
+          return;
+        }
+        let nextIdx = (this.currentIndex + 1) % this.items.length;
+        while (this.items[nextIdx].status === 'correct' || this.items[nextIdx].status === 'wrong') {
+          nextIdx = (nextIdx + 1) % this.items.length;
+        }
+        this.currentIndex = nextIdx;
+        this.renderWheel();
+        this.loadCurrentQuestion();
+      },
+
+      finishGame() {
+        clearInterval(this.intervalId);
+        const ok = this.items.filter(i => i.status === 'correct').length;
+        const total = this.items.length;
+        MusicEngine.playSfx('win');
+        const fb = document.getElementById('rosco-feedback');
+        fb.classList.remove('hidden');
+        fb.className = 'mt-3 p-4 rounded-xl text-sm font-extrabold bg-[#E6F4FA] text-[#0077B6] border-2 border-[#0096D6]';
+        fb.innerHTML = `🎉 ¡Rosco finalizado! Lograste <strong>${ok} de ${total}</strong> aciertos. Cambia los filtros arriba para jugar un nuevo rosco.`;
+        CosapinAssistant.say(`¡Felicitaciones! Completaste el rosco con ${ok} de ${total} aciertos.`);
+      }
+    };
+
+    /* -------------------------------------------------------------------------
+       4. VISTA 2: DESAFÍO TRINORMA 2026 (TRIVIA Y NIVEL FINAL)
+    ------------------------------------------------------------------------- */
+    const TRIVIA_BANK = [
+      {
+        iso: 'ISO 9001:2026', clause: '5.1.1 Liderazgo y compromiso',
+        q: 'Durante una auditoría a la Alta Dirección en ISO 9001:2026, el Gerente muestra que firmó la Política de Calidad hace un año, pero desconoce los indicadores de reclamos y no asignó presupuesto para digitalizar registros. ¿Cuál es la conclusión del auditor?',
+        opts: [
+          'Es conforme porque la firma de la política demuestra liderazgo formal.',
+          'Es una No Conformidad: la alta dirección no solo aprueba documentos, debe involucrarse, revisar resultados y asignar recursos.',
+          'Es conforme si el Jefe de Calidad conoce los indicadores.',
+          'Solo aplica una observación menor porque la digitalización es opcional.'
+        ],
+        ans: 1,
+        exp: 'En la cláusula 5.1.1, la dirección no solo aprueba el SGC; debe integrarlo a la gestión del negocio, asignar recursos, revisar resultados y promover mejoras.'
+      },
+      {
+        iso: 'ISO 45001:2026', clause: '5.4 Consulta y participación',
+        q: 'En un frente de obra, el ingeniero de seguridad elabora solo el IPERC en su oficina y luego lo publica en el mural para que los operarios lo firmen. ¿Cumple con la cláusula 5.4 de ISO 45001:2026?',
+        opts: [
+          'Sí, porque los trabajadores fueron informados y firmaron la lista.',
+          'No, porque informar después de decidir no sustituye la consulta y participación real de los trabajadores en el IPERC y controles.',
+          'Sí, siempre que el IPERC esté aprobado por el gerente de proyecto.',
+          'Solo incumple si ocurre un accidente grave en el mes.'
+        ],
+        ans: 1,
+        exp: 'La cláusula 5.4 exige participación activa de los trabajadores (especialmente sin cargos directivos) en la identificación de peligros, IPERC, ATS y eliminación de barreras.'
+      },
+      {
+        iso: 'Trinorma 2026', clause: 'Criterios de Auditoría',
+        q: '¿Qué tres elementos indispensables debe contener una No Conformidad bien redactada durante una auditoría integrada?',
+        opts: [
+          'Nombre del culpable, sanción sugerida y fecha de despido.',
+          'La evidencia objetiva encontrada, el requisito incumplido y una descripción clara de la brecha.',
+          'Opinión del auditor, rumor del personal y foto sin permiso.',
+          'Solo el número de cláusula de la norma ISO.'
+        ],
+        ans: 1,
+        exp: 'Una No Conformidad sólida requiere: 1) Evidencia encontrada, 2) Requisito aplicable incumplido y 3) Descripción clara de la brecha.'
+      },
+      {
+        iso: 'Trinorma 2026', clause: 'Técnica de Auditoría',
+        q: 'Estás auditando la entrega de EPP y registros de inducción, pero los documentos revisados no son concluyentes para confirmar cumplimiento. ¿Qué debe hacer el auditor?',
+        opts: [
+          'Cerrar inmediatamente como No Conformidad Mayor por sospecha.',
+          'Darlo por Conforme para no retrasar la reunión de cierre.',
+          'Ampliar la muestra, entrevistar otras fuentes y buscar corroboración antes de concluir.',
+          'Pedirle al auditado que redacte el documento en ese instante.'
+        ],
+        ans: 2,
+        exp: 'Cuando la evidencia no es suficiente, el auditor debe ampliar la muestra, contrastar entrevistas y observación en campo antes de emitir una conclusión.'
+      },
+      {
+        iso: 'ISO 14001:2026', clause: '4.1 / 5.1 Acción Climática',
+        q: 'Según las actualizaciones de ISO 14001:2026, ¿qué aspecto estratégico debe integrar la alta dirección al analizar el contexto y los aspectos ambientales?',
+        opts: [
+          'Únicamente el reciclaje de papel en oficinas administrativas.',
+          'La relevancia del cambio climático, la protección de la biodiversidad y la perspectiva de ciclo de vida en la cadena de valor.',
+          'Solo el pago de arbitrios municipales.',
+          'Eliminar la matriz de aspectos ambientales significativos.'
+        ],
+        ans: 1,
+        exp: 'ISO 14001:2026 refuerza la integración de la acción frente al cambio climático, la biodiversidad y la gestión ambiental en las decisiones estratégicas del negocio.'
+      },
+      {
+        iso: 'ISO 45001:2026', clause: '5.1 / 6.1 Bienestar Integral',
+        q: '¿Qué enfoque clave incorpora la nueva edición ISO 45001:2026 respecto a la salud de las personas en el trabajo?',
+        opts: [
+          'Limitar la SST exclusivamente al uso de casco y botas.',
+          'Ampliar la prevención hacia la salud mental, factores de riesgo psicosocial, bienestar integral y entornos de trabajo digitales/híbridos.',
+          'Transferir toda la responsabilidad de seguridad al trabajador.',
+          'Eliminar las inspecciones gerenciales de campo.'
+        ],
+        ans: 1,
+        exp: 'ISO 45001:2026 pone a las personas en el centro, abordando explícitamente riesgos psicosociales, salud mental y nuevas modalidades de trabajo.'
+      },
+      {
+        iso: 'ISO 9001:2026', clause: '5.1.2 Enfoque al cliente',
+        q: 'Un área comercial acepta un contrato con plazos modificados por el cliente sin revisar si operaciones tiene capacidad técnica ni registrar el cambio. ¿Qué requisito de ISO 9001:2026 se incumple?',
+        opts: [
+          '5.1.2 Enfoque al cliente (revisión de requisitos antes de asumir compromisos y control de cambios).',
+          '5.4 Consulta y participación de los trabajadores.',
+          '10.3 Auditoría interna ambiental.',
+          'No hay incumplimiento si el cliente ya pagó el adelanto.'
+        ],
+        ans: 0,
+        exp: 'El auditor debe comprobar cómo se revisan los requisitos antes de asumir un compromiso y cómo se controlan los cambios solicitados por el cliente.'
+      },
+      {
+        iso: 'ISO 9001:2026', clause: '5.2 Política de Calidad',
+        q: 'Al entrevistar a tres supervisores en obra sobre la Política de Calidad, ninguno sabe cómo su trabajo diario contribuye a ella y la versión publicada es del año 2019. ¿Qué ocurre?',
+        opts: [
+          'Es conforme si la política está guardada en la carpeta del gerente.',
+          'No Conformidad en 5.2: la política debe estar vigente, comunicada, disponible y ser comprendida por el personal.',
+          'Basta con enviarla por correo masivo sin verificar comprensión.',
+          'La política solo debe conocerla el área de Recursos Humanos.'
+        ],
+        ans: 1,
+        exp: 'El auditor verifica control de versiones vigente, difusión efectiva y que el personal comprenda cómo aporta al cumplimiento de la política.'
+      },
+      {
+        iso: 'ISO 45001:2026', clause: '5.3 Roles y reporte sin temor',
+        q: 'Un operario indica en entrevista que prefiere no reportar condiciones subestándar porque teme recibir llamados de atención o represalias de su capataz. ¿Qué cláusula se ve afectada?',
+        opts: [
+          '5.1 y 5.3 de ISO 45001:2026: la dirección debe proteger de represalias a quienes reportan peligros o incidentes.',
+          '8.4 Control de proveedores externos de calidad.',
+          '7.5 Información documentada financiera.',
+          'Ninguna, el reporte de peligros es voluntario y sin garantías.'
+        ],
+        ans: 0,
+        exp: 'La alta dirección debe garantizar canales seguros de reporte y proteger contra cualquier represalia a quienes comunican peligros o condiciones inseguras.'
+      },
+      {
+        iso: 'ISO 14001:2026', clause: '5.2 Política Ambiental',
+        q: '¿Cuáles son los tres compromisos obligatorios que debe incluir toda Política Ambiental conforme a la cláusula 5.2 de ISO 14001:2026?',
+        opts: [
+          'Aumentar ventas, reducir personal y comprar maquinaria nueva.',
+          'Protección del medio ambiente (prevención de la contaminación), cumplimiento de obligaciones legales y mejora continua del SGA.',
+          'Solo cumplimiento de horarios y uso de uniformes.',
+          'Publicar fotos en redes sociales una vez al año.'
+        ],
+        ans: 1,
+        exp: 'La política ambiental debe responder a los impactos reales e incluir protección ambiental, compliance legal y mejora continua.'
+      },
+      {
+        iso: 'ISO 9001:2026', clause: 'Cultura de Calidad y Datos',
+        q: '¿Qué novedad clave destaca la edición ISO 9001:2026 para fortalecer la toma de decisiones del negocio?',
+        opts: [
+          'Eliminar los indicadores de gestión.',
+          'Integrar la transformación digital, gobernanza de datos confiables, cultura de calidad y resiliencia organizacional.',
+          'Prohibir el uso de sistemas informáticos en auditorías.',
+          'Reemplazar las auditorías internas por encuestas anónimas.'
+        ],
+        ans: 1,
+        exp: 'ISO 9001:2026 actualiza el estándar hacia la digitalización, integridad de los datos, cultura de calidad y resiliencia ante disrupciones.'
+      },
+      {
+        iso: 'Trinorma 2026', clause: 'Entrevista a la Alta Dirección',
+        q: 'Al entrevistar a la Alta Dirección durante una auditoría integrada, ¿cómo deben formularse las preguntas del auditor?',
+        opts: [
+          'Con tecnicismos confusos para poner a prueba su memoria.',
+          'Directas, claras y abiertas sobre decisiones tomadas, recursos asignados, riesgos estratégicos y resultados revisados.',
+          'Leyendo textualmente toda la norma ISO de principio a fin.',
+          'Preguntando únicamente por el mantenimiento de extintores.'
+        ],
+        ans: 1,
+        exp: 'Las preguntas a la alta dirección deben ser claras, estratégicas y directas para verificar liderazgo visible y toma de decisiones basada en resultados.'
+      },
+      {
+        iso: 'ISO 14001:2026', clause: '5.3 Roles y autoridades',
+        q: 'En un proyecto ocurre un derrame menor de hidrocarburo, pero nadie tiene autoridad definida para detener la actividad ni escalar la emergencia ambiental. ¿Qué falla?',
+        opts: [
+          '5.3 Roles, responsabilidades y autoridades: los responsables deben estar claros y tener autoridad real para actuar y escalar riesgos.',
+          '5.1.2 Enfoque al cliente.',
+          '9.2 Revisión de contratos comerciales.',
+          'No falla nada si se limpia al día siguiente sin reportar.'
+        ],
+        ans: 0,
+        exp: 'El auditor comprueba que las funciones ambientales estén asignadas, comunicadas y cuenten con autoridad efectiva para escalar incidentes o incumplimientos.'
+      },
+      {
+        iso: 'ISO 45001:2026', clause: '5.1 Inspecciones gerenciales',
+        q: '¿Qué evidencia objetiva demuestra mejor el liderazgo visible de la Alta Dirección en Seguridad y Salud en el Trabajo (5.1)?',
+        opts: [
+          'Un cuadro decorativo en la sala de reuniones.',
+          'Registros de inspecciones gerenciales en campo, actas del Comité SST con acuerdos ejecutados y presupuestos aprobados para eliminar peligros.',
+          'Un correo enviado hace dos años.',
+          'La firma del practicante de seguridad en los ATS.'
+        ],
+        ans: 1,
+        exp: 'El liderazgo visible se comprueba con participación real en inspecciones gerenciales, seguimiento de incidentes y recursos asignados.'
+      },
+      {
+        iso: 'Trinorma 2026', clause: '5.3 Dueños de Proceso',
+        q: 'Tras una reestructuración interna en la empresa, dos procesos críticos quedaron sin responsable asignado en el organigrama ni en el MOF. ¿Qué determina el auditor?',
+        opts: [
+          'Es aceptable hasta el próximo año.',
+          'No Conformidad en 5.3: los cambios organizacionales no deben dejar procesos críticos sin dueño ni responsabilidades contradictorias.',
+          'Se resuelve verbalmente sin actualizar perfiles.',
+          'Solo aplica a ISO 9001 y no a 14001 ni 45001.'
+        ],
+        ans: 1,
+        exp: 'Cuando ocurren cambios en la organización, las responsabilidades y autoridades deben mantenerse claras y sin vacíos en los tres sistemas.'
+      },
+      {
+        iso: 'ISO 9001:2026', clause: '5.2 Coherencia estratégica',
+        q: '¿Cómo comprueba el auditor que la Política de Calidad no es solo un documento declarativo sino que guía la gestión diaria?',
+        opts: [
+          'Verificando que sus compromisos estén desplegados en objetivos medibles, indicadores de proceso y acciones de mejora.',
+          'Midiendo el tamaño de la letra del afiche.',
+          'Contando cuántas veces aparece la palabra "excelencia".',
+          'Revisando únicamente la factura de imprenta.'
+        ],
+        ans: 0,
+        exp: 'Los compromisos de la política deben reflejarse directamente en los objetivos e indicadores de los procesos.'
+      },
+      {
+        iso: 'ISO 45001:2026', clause: '5.4 Barreras a la participación',
+        q: 'Un trabajador de turno nocturno señala que nunca participa en las consultas de SST porque las reuniones se hacen solo a las 10:00 a.m. fuera de su jornada y sin facilidades. ¿Qué evidencia esto?',
+        opts: [
+          'Falta de interés del trabajador.',
+          'Incumplimiento en 5.4: la organización no ha eliminado las barreras de horario y tiempo para la participación efectiva.',
+          'Conformidad total porque la reunión sí se realizó.',
+          'Aplica solo a personal administrativo.'
+        ],
+        ans: 1,
+        exp: 'La cláusula 5.4 exige identificar y eliminar barreras (horario, idioma, temor, falta de recursos) que impidan la participación de los trabajadores.'
+      },
+      {
+        iso: 'ISO 14001:2026', clause: '5.1 Cumplimiento legal',
+        q: '¿Qué debe verificar el auditor respecto a las obligaciones de cumplimiento ambiental ante la Alta Dirección?',
+        opts: [
+          'Que la dirección conozca los aspectos significativos, revise el estado de cumplimiento legal y tome decisiones frente a brechas.',
+          'Que solo el abogado externo conozca las leyes.',
+          'Que no existan matrices legales en el proyecto.',
+          'Que se archiven las normas sin evaluarlas.'
+        ],
+        ans: 0,
+        exp: 'La alta dirección debe revisar el desempeño ambiental y el cumplimiento de requisitos legales y corporativos.'
+      },
+      {
+        iso: 'Trinorma 2026', clause: 'Auditoría Integrada',
+        q: '¿Qué significa auditar mediante triangulación de información?',
+        opts: [
+          'Auditar solo a tres personas de la oficina central.',
+          'Contrastar documentos/registros, entrevistas con el personal y observación directa en campo para llegar a una conclusión objetiva.',
+          'Usar tres colores de lapicero en el informe.',
+          'Auditar tres empresas el mismo día.'
+        ],
+        ans: 1,
+        exp: 'Auditar es contrastar documentos, entrevistas, observación y resultados para llegar a una conclusión sólida.'
+      },
+      {
+        iso: 'ISO 45001:2026', clause: '5.2 Compromisos Política SST',
+        q: 'A diferencia de 9001 y 14001, ¿qué compromiso específico y obligatorio exige la cláusula 5.2 de ISO 45001:2026 en su Política de SST?',
+        opts: [
+          'Compromiso de consulta y participación de los trabajadores, y de eliminar peligros y reducir riesgos para la SST.',
+          'Compromiso de rentabilidad financiera trimestral.',
+          'Compromiso de exportación internacional.',
+          'Compromiso de certificación energética exclusivamente.'
+        ],
+        ans: 0,
+        exp: 'La Política de SST debe incluir compromisos explícitos de condiciones seguras, cumplimiento legal, eliminación de peligros/reducción de riesgos, consulta/participación y mejora continua.'
+      }
+    ];
+
+    const TriviaGame = {
+      questions: [],
+      index: 0,
+      score: 0,
+      hits: 0,
+      answered: false,
+
+      start() {
+        const count = parseInt(document.getElementById('trivia-count-select').value, 10);
+        const shuffled = [...TRIVIA_BANK].sort(() => Math.random() - 0.5);
+        this.questions = shuffled.slice(0, Math.min(count, shuffled.length));
+        this.index = 0;
+        this.score = 0;
+        this.hits = 0;
+        this.answered = false;
+
+        document.getElementById('trivia-play-area').classList.remove('hidden');
+        document.getElementById('trivia-result-area').classList.add('hidden');
+        document.getElementById('trivia-q-total').textContent = this.questions.length;
+        this.renderQuestion();
+      },
+
+      renderQuestion() {
+        this.answered = false;
+        const q = this.questions[this.index];
+        document.getElementById('trivia-q-num').textContent = this.index + 1;
+        document.getElementById('trivia-score').textContent = this.score;
+        const pct = ((this.index) / this.questions.length) * 100;
+        document.getElementById('trivia-progress-bar').style.width = `${Math.max(5, pct)}%`;
+
+        document.getElementById('trivia-iso-badge').textContent = q.iso;
+        document.getElementById('trivia-clause-badge').textContent = `Cláusula ${q.clause}`;
+        document.getElementById('trivia-question-text').textContent = q.q;
+        document.getElementById('trivia-explanation-box').classList.add('hidden');
+
+        const optsBox = document.getElementById('trivia-options');
+        optsBox.innerHTML = '';
+        const letters = ['A', 'B', 'C', 'D'];
+        q.opts.forEach((optText, idx) => {
+          const btn = document.createElement('button');
+          btn.className = 'trivia-opt-btn text-left p-4 rounded-2xl border-2 border-slate-200 bg-white hover:border-[#0096D6] hover:bg-[#E6F4FA]/40 transition flex items-start gap-3 shadow-sm';
+          btn.innerHTML = `
+            <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">${letters[idx]}</span>
+            <span class="text-xs sm:text-sm font-semibold text-slate-700 leading-snug">${optText}</span>
+          `;
+          btn.onclick = () => this.selectOption(idx);
+          optsBox.appendChild(btn);
+        });
+      },
+
+      selectOption(selectedIdx) {
+        if (this.answered) return;
+        this.answered = true;
+        const q = this.questions[this.index];
+        const buttons = document.querySelectorAll('.trivia-opt-btn');
+
+        buttons.forEach((btn, idx) => {
+          btn.disabled = true;
+          if (idx === q.ans) {
+            btn.className = 'trivia-opt-btn text-left p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-50 flex items-start gap-3 shadow-sm';
+            btn.querySelector('span').className = 'w-8 h-8 rounded-xl bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5';
+          } else if (idx === selectedIdx) {
+            btn.className = 'trivia-opt-btn text-left p-4 rounded-2xl border-2 border-rose-500 bg-rose-50 flex items-start gap-3 shadow-sm';
+            btn.querySelector('span').className = 'w-8 h-8 rounded-xl bg-rose-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5';
+          }
+        });
+
+        const expBox = document.getElementById('trivia-explanation-box');
+        const expTitle = document.getElementById('trivia-explanation-title');
+        const expText = document.getElementById('trivia-explanation-text');
+        expBox.classList.remove('hidden');
+
+        if (selectedIdx === q.ans) {
+          this.hits++;
+          this.score += 100;
+          document.getElementById('trivia-score').textContent = this.score;
+          expBox.className = 'mt-4 p-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/90 text-emerald-950';
+          expTitle.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600 mr-1.5"></i>¡Criterio de Auditor Correcto! (+100 pts)';
+          MusicEngine.playSfx('ok');
+          CosapinAssistant.say('¡Muy bien! Aplicaste correctamente el requisito de la Trinorma 2026.');
+        } else {
+          expBox.className = 'mt-4 p-4 rounded-2xl border-2 border-rose-300 bg-rose-50/90 text-rose-950';
+          expTitle.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-600 mr-1.5"></i>Oportunidad de Mejora Normativa';
+          MusicEngine.playSfx('err');
+          CosapinAssistant.say('Revisa el fundamento normativo en el recuadro para fortalecer tu criterio.');
+        }
+        expText.textContent = q.exp;
+      },
+
+      nextQuestion() {
+        this.index++;
+        if (this.index >= this.questions.length) {
+          this.showResults();
+        } else {
+          this.renderQuestion();
+        }
+      },
+
+      showResults() {
+        document.getElementById('trivia-play-area').classList.add('hidden');
+        document.getElementById('trivia-result-area').classList.remove('hidden');
+        MusicEngine.playSfx('win');
+
+        const total = this.questions.length;
+        const pct = Math.round((this.hits / total) * 100);
+        document.getElementById('trivia-final-hits').textContent = `${this.hits}/${total}`;
+        document.getElementById('trivia-final-pct').textContent = `${pct}%`;
+        document.getElementById('trivia-final-pts').textContent = this.score;
+
+        let rank = '';
+        let desc = '';
+        let medalColor = 'bg-[#0096D6]';
+
+        if (pct >= 90) {
+          rank = 'Nivel 4: Maestro Auditor Líder Trinorma COSAPI';
+          desc = 'Dominio sobresaliente de ISO 9001:2026, ISO 14001:2026 e ISO 45001:2026. Listo para liderar auditorías integradas de alto impacto.';
+          medalColor = 'bg-amber-500';
+        } else if (pct >= 70) {
+          rank = 'Nivel 3: Auditor Interno Certificado Trinorma 2026';
+          desc = 'Sólido criterio para contrastar evidencias, evaluar liderazgo en el Capítulo 5 y redactar No Conformidades con precisión.';
+          medalColor = 'bg-emerald-600';
+        } else if (pct >= 50) {
+          rank = 'Nivel 2: Auditor en Desarrollo Integrado';
+          desc = 'Buen manejo de los conceptos base. Refuerza la consulta y participación (5.4) y los nuevos enfoques 2026.';
+          medalColor = 'bg-[#0096D6]';
+        } else {
+          rank = 'Nivel 1: Observador de Auditoría en Formación';
+          desc = 'Estás iniciando tu ruta Trinorma 2026. Repasa la Guía Oficial y consulta el Chatbot Auditor COSAPIN para subir de nivel.';
+          medalColor = 'bg-slate-600';
+        }
+
+        document.getElementById('trivia-rank-title').textContent = rank;
+        document.getElementById('trivia-rank-desc').textContent = desc;
+        document.getElementById('trivia-medal-icon').className = `w-20 h-20 mx-auto rounded-full ${medalColor} text-white flex items-center justify-center text-4xl shadow-lg mb-4`;
+        CosapinAssistant.say(`¡Has alcanzado el ${rank}!`);
+      }
+    };
+
+    /* -------------------------------------------------------------------------
+       5. VISTA 3: PUPILETRAS TRINORMA 2026 POR NIVELES
+    ------------------------------------------------------------------------- */
+    const WS_TERMS = [
+      { word: 'LIDERAZGO', iso: 'ALL', def: 'Capítulo 5 de la Trinorma: compromiso visible, rendición de cuentas y asignación de recursos.' },
+      { word: 'EVIDENCIA', iso: 'ALL', def: 'Información verificable (registros, entrevistas, observación) que sustenta un hallazgo.' },
+      { word: 'POLITICA', iso: 'ALL', def: 'Cláusula 5.2: declaración formal de compromisos de la alta dirección.' },
+      { word: 'AUDITORIA', iso: 'ALL', def: 'Proceso sistemático e independiente para evaluar el cumplimiento del sistema.' },
+      { word: 'MEJORA', iso: 'ALL', def: 'Capítulo 10: acción continua para incrementar el desempeño integrado.' },
+      { word: 'BRECHA', iso: 'ALL', def: 'Distancia entre lo que exige la norma ISO y la realidad encontrada.' },
+      { word: 'HALLAZGO', iso: 'ALL', def: 'Resultado de comparar la evidencia recopilada contra los criterios de auditoría.' },
+      { word: 'INTEGRIDAD', iso: 'ALL', def: 'Pilar corporativo COSAPI: Cero Accidentes con Integridad.' },
+      { word: 'CLIENTE', iso: '9001', def: 'Cláusula 5.1.2: foco principal de ISO 9001:2026 para lograr su satisfacción.' },
+      { word: 'CALIDAD', iso: '9001', def: 'Grado en que un conjunto de características inherentes cumple los requisitos.' },
+      { word: 'DIGITAL', iso: '9001', def: 'Transformación tecnológica y gestión de datos integrada en ISO 9001:2026.' },
+      { word: 'CONTRATO', iso: '9001', def: 'Acuerdo cuyos requisitos deben revisarse antes de asumir compromisos.' },
+      { word: 'AMBIENTAL', iso: '14001', def: 'Sistema de gestión orientado a prevenir impactos y proteger ecosistemas.' },
+      { word: 'CLIMATICO', iso: '14001', def: 'Cambio climático: variable obligatoria en el análisis de contexto ISO 2026.' },
+      { word: 'IMPACTO', iso: '14001', def: 'Cambio en el medio ambiente resultante de los aspectos de la organización.' },
+      { word: 'RESIDUOS', iso: '14001', def: 'Materiales gestionados bajo enfoque de economía circular y ciclo de vida.' },
+      { word: 'IPERC', iso: '45001', def: 'Herramienta clave de identificación de peligros y evaluación de riesgos con participación.' },
+      { word: 'CONSULTA', iso: '45001', def: 'Cláusula 5.4: pedir opinión a los trabajadores antes de tomar decisiones de SST.' },
+      { word: 'PELIGROS', iso: '45001', def: 'Fuentes con potencial de causar lesiones y deterioro de la salud.' },
+      { word: 'BIENESTAR', iso: '45001', def: 'Salud física, mental y psicosocial promovida por ISO 45001:2026.' }
+    ];
+
+    const WordSearchGame = {
+      size: 13,
+      grid: [],
+      words: [],
+      foundWords: new Set(),
+      selecting: false,
+      startCell: null,
+      currentSelection: [],
+
+      init() {
+        const iso = document.getElementById('ws-filter-iso').value;
+        const level = document.getElementById('ws-filter-level').value;
+        this.size = level === 'FACIL' ? 10 : (level === 'INTERMEDIO' ? 13 : 15);
+        const count = level === 'FACIL' ? 8 : (level === 'INTERMEDIO' ? 12 : 15);
+
+        let pool = WS_TERMS.filter(t => t.word.length <= this.size - 1);
+        if (iso !== 'ALL') {
+          const specific = pool.filter(t => t.iso === iso || t.iso === 'ALL');
+          if (specific.length >= count) pool = specific;
+        }
+        this.words = [...pool].sort(() => Math.random() - 0.5).slice(0, count);
+        this.foundWords = new Set();
+        this.startCell = null;
+        this.currentSelection = [];
+
+        this.buildBoard();
+        this.renderBoard();
+        this.renderWordList();
+        document.getElementById('ws-complete-badge').classList.add('hidden');
+      },
+
+      buildBoard() {
+        this.grid = Array.from({ length: this.size }, () => Array(this.size).fill(''));
+        const dirs = [
+          [0, 1], [1, 0], [1, 1], [-1, 1]
+        ];
+
+        this.words.forEach(item => {
+          const w = item.word;
+          let placed = false;
+          for (let attempt = 0; attempt < 150 && !placed; attempt++) {
+            const [dr, dc] = dirs[Math.floor(Math.random() * dirs.length)];
+            const r0 = Math.floor(Math.random() * this.size);
+            const c0 = Math.floor(Math.random() * this.size);
+            const rEnd = r0 + dr * (w.length - 1);
+            const cEnd = c0 + dc * (w.length - 1);
+            if (rEnd < 0 || rEnd >= this.size || cEnd < 0 || cEnd >= this.size) continue;
+
+            let fits = true;
+            for (let k = 0; k < w.length; k++) {
+              const cell = this.grid[r0 + dr * k][c0 + dc * k];
+              if (cell !== '' && cell !== w[k]) { fits = false; break; }
+            }
+            if (fits) {
+              item.coords = [];
+              for (let k = 0; k < w.length; k++) {
+                const rr = r0 + dr * k;
+                const cc = c0 + dc * k;
+                this.grid[rr][cc] = w[k];
+                item.coords.push(`${rr},${cc}`);
+              }
+              placed = true;
+            }
+          }
+        });
+
+        const alphabet = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
+        for (let r = 0; r < this.size; r++) {
+          for (let c = 0; c < this.size; c++) {
+            if (this.grid[r][c] === '') {
+              this.grid[r][c] = alphabet[Math.floor(Math.random() * alphabet.length)];
+            }
+          }
+        }
+      },
+
+      renderBoard() {
+        const container = document.getElementById('ws-grid');
+        container.style.gridTemplateColumns = `repeat(${this.size}, minmax(0, 1fr))`;
+        container.innerHTML = '';
+
+        const cellSizeClass = this.size <= 10 ? 'w-8 h-8 sm:w-9 sm:h-9 text-sm'
+                            : this.size <= 13 ? 'w-6 h-6 sm:w-8 sm:h-8 text-xs sm:text-sm'
+                            : 'w-5 h-5 sm:w-7 sm:h-7 text-[11px] sm:text-xs';
+
+        for (let r = 0; r < this.size; r++) {
+          for (let c = 0; c < this.size; c++) {
+            const div = document.createElement('div');
+            div.dataset.r = r;
+            div.dataset.c = c;
+            div.id = `ws-cell-${r}-${c}`;
+            div.className = `wordsearch-cell ${cellSizeClass} bg-white rounded-lg font-extrabold text-slate-700 flex items-center justify-center shadow-sm cursor-pointer border border-slate-200`;
+            div.textContent = this.grid[r][c];
+
+            div.addEventListener('mousedown', () => this.onCellDown(r, c));
+            div.addEventListener('mouseenter', () => this.onCellEnter(r, c));
+            div.addEventListener('mouseup', () => this.onCellUp());
+
+            container.appendChild(div);
+          }
+        }
+        window.addEventListener('mouseup', () => { if (this.selecting) this.onCellUp(); });
+      },
+
+      onCellDown(r, c) {
+        // Soporte tanto para arrastre como para clic inicio -> clic fin
+        if (this.startCell && !this.selecting && (this.startCell.r !== r || this.startCell.c !== c)) {
+          this.computeLine(this.startCell.r, this.startCell.c, r, c);
+          this.checkSelection();
+          this.startCell = null;
+          this.clearTempSelection();
+          return;
+        }
+        this.selecting = true;
+        this.startCell = { r, c };
+        this.computeLine(r, c, r, c);
+      },
+
+      onCellEnter(r, c) {
+        if (!this.selecting || !this.startCell) return;
+        this.computeLine(this.startCell.r, this.startCell.c, r, c);
+      },
+
+      onCellUp() {
+        if (!this.selecting) return;
+        this.selecting = false;
+        if (this.currentSelection.length > 1) {
+          this.checkSelection();
+          this.startCell = null;
+          this.clearTempSelection();
+        }
+      },
+
+      computeLine(r0, c0, r1, c1) {
+        this.clearTempSelection();
+        const dr = Math.sign(r1 - r0);
+        const dc = Math.sign(c1 - c0);
+        const distR = Math.abs(r1 - r0);
+        const distC = Math.abs(c1 - c0);
+        if (distR !== 0 && distC !== 0 && distR !== distC) return;
+
+        const steps = Math.max(distR, distC);
+        this.currentSelection = [];
+        for (let k = 0; k <= steps; k++) {
+          const rr = r0 + dr * k;
+          const cc = c0 + dc * k;
+          this.currentSelection.push({ r: rr, c: cc });
+          const el = document.getElementById(`ws-cell-${rr}-${cc}`);
+          if (el) el.classList.add('selected');
+        }
+      },
+
+      clearTempSelection() {
+        document.querySelectorAll('.wordsearch-cell.selected').forEach(el => el.classList.remove('selected'));
+      },
+
+      checkSelection() {
+        const str = this.currentSelection.map(p => this.grid[p.r][p.c]).join('');
+        const rev = str.split('').reverse().join('');
+        const match = this.words.find(w => !this.foundWords.has(w.word) && (w.word === str || w.word === rev));
+
+        if (match) {
+          this.foundWords.add(match.word);
+          this.currentSelection.forEach(p => {
+            const el = document.getElementById(`ws-cell-${p.r}-${p.c}`);
+            if (el) {
+              el.classList.remove('hinted');
+              el.classList.add('found');
+            }
+          });
+          MusicEngine.playSfx('ok');
+          document.getElementById('ws-meaning-text').innerHTML =
+            `<strong class="text-slate-800">${match.word}:</strong> ${match.def}`;
+          CosapinAssistant.say(`¡Encontraste "${match.word}"! ${match.def}`);
+          this.renderWordList();
+
+          if (this.foundWords.size === this.words.length) {
+            document.getElementById('ws-complete-badge').classList.remove('hidden');
+            MusicEngine.playSfx('win');
+            showToast('¡Pupiletras Trinorma 2026 completado!');
+          }
+        }
+      },
+
+      renderWordList() {
+        const list = document.getElementById('ws-word-list');
+        list.innerHTML = '';
+        document.getElementById('ws-found-count').textContent = this.foundWords.size;
+        document.getElementById('ws-total-count').textContent = this.words.length;
+
+        this.words.forEach(item => {
+          const found = this.foundWords.has(item.word);
+          const pill = document.createElement('div');
+          pill.className = found
+            ? 'px-2.5 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-extrabold line-through flex items-center justify-between'
+            : 'px-2.5 py-1.5 rounded-xl bg-white text-slate-700 border border-slate-200 text-xs font-bold flex items-center justify-between';
+          pill.innerHTML = `<span>${item.word}</span>${found ? '<i class="fa-solid fa-check text-emerald-600"></i>' : ''}`;
+          list.appendChild(pill);
+        });
+      },
+
+      hint() {
+        const pending = this.words.find(w => !this.foundWords.has(w.word) && w.coords && w.coords.length > 0);
+        if (!pending) return;
+        const [r, c] = pending.coords[0].split(',');
+        const el = document.getElementById(`ws-cell-${r}-${c}`);
+        if (el) {
+          el.classList.add('hinted');
+          setTimeout(() => el.classList.remove('hinted'), 2500);
+        }
+        MusicEngine.playSfx('click');
+        CosapinAssistant.say(`Mira la letra resaltada en rojo: ahí comienza "${pending.word}".`);
+      }
+    };
+
+    /* -------------------------------------------------------------------------
+       6. VISTA 4: CHATBOT AUDITOR COSAPIN (+60 PREGUNTAS REALES DE AUDITORÍA)
+    ------------------------------------------------------------------------- */
+    const AUDITOR_QUESTIONS_64 = [
+      // ISO 9001:2026 (22 preguntas)
+      { id: 1, iso: '9001', cap: '5.1.1', q: '¿Qué resultados de calidad revisa periódicamente la Alta Dirección y qué decisiones estratégicas tomó con base en ellos?',
+        check: 'Participación real de la dirección en decisiones del SGC, conocimiento de resultados y acciones frente a brechas.',
+        ev: 'Actas de Revisión por la Dirección, tableros de indicadores, presupuestos aprobados y seguimiento de acuerdos.',
+        nc: 'Cuando la dirección desconoce los resultados, no asigna recursos o deja el SGC aislado de la gestión del negocio.' },
+      { id: 2, iso: '9001', cap: '5.1.1', q: '¿Qué recursos financieros, tecnológicos y humanos asignó la dirección recientemente para fortalecer la calidad y la digitalización?',
+        check: 'Coherencia entre los objetivos de calidad/digitalización 2026 y el presupuesto asignado.',
+        ev: 'Presupuesto anual aprobado, órdenes de compra de software/herramientas digitales (COSAPI Gestiona) y dotación de personal.',
+        nc: 'Cuando existen objetivos aprobados pero sin recursos asignados para ejecutarlos.' },
+      { id: 3, iso: '9001', cap: '5.1.2', q: 'Antes de aceptar un contrato o adenda con el cliente, ¿cómo confirman que tienen la capacidad técnica y legal para cumplirlo?',
+        check: 'Revisión previa de requisitos contractuales, legales y capacidad operativa antes de comprometerse.',
+        ev: 'Matriz de revisión de contratos, actas de comité de ofertas, órdenes de servicio y evaluación de riesgos contractuales.',
+        nc: 'Cuando se aceptan compromisos sin revisar requisitos o se omiten exigencias legales/contractuales.' },
+      { id: 4, iso: '9001', cap: '5.1.2', q: '¿Cómo registran, evalúan y controlan los cambios solicitados por el cliente durante la ejecución del proyecto?',
+        check: 'Trazabilidad de modificaciones al alcance, plazos o especificaciones técnicas.',
+        ev: 'Control de cambios contractuales, correos formales aprobados, adendas y actualización de planos/especificaciones.',
+        nc: 'Cuando se ejecutan cambios verbales sin aprobación ni evaluación de impacto en la calidad.' },
+      { id: 5, iso: '9001', cap: '5.1.2', q: '¿Qué reclamos de clientes se recibieron en el último semestre y qué acciones correctivas evitaron su recurrencia?',
+        check: 'Atención oportuna de quejas, análisis de causa raíz y eficacia de las acciones tomadas.',
+        ev: 'Registro de reclamos, informes de análisis de causa, acciones correctivas cerradas y encuestas de satisfacción.',
+        nc: 'Cuando no se atienden reclamos o no se mide ni gestiona la satisfacción del cliente.' },
+      { id: 6, iso: '9001', cap: '5.2', q: '¿Por qué la Política de Calidad vigente es adecuada al propósito y contexto actual de la organización?',
+        check: 'Alineación de la política con la estrategia corporativa y las actualizaciones ISO 9001:2026.',
+        ev: 'Política de Calidad aprobada y vigente, plan estratégico y revisión por la dirección.',
+        nc: 'Cuando la política es genérica, está desactualizada o no guarda relación con la estrategia.' },
+      { id: 7, iso: '9001', cap: '5.2', q: '¿Cómo comprueban que el personal operativo y administrativo entiende cómo aporta a la Política de Calidad?',
+        check: 'Eficacia de la comunicación y toma de conciencia en todos los niveles.',
+        ev: 'Registros de inducción, charlas, evaluaciones de comprensión, publicaciones en COSAPI Gestiona y entrevistas en campo.',
+        nc: 'Cuando la política no se comunica o el personal entrevistado desconoce su contenido y aplicación.' },
+      { id: 8, iso: '9001', cap: '5.2', q: '¿En qué objetivos e indicadores medibles se reflejan los compromisos de la Política de Calidad?',
+        check: 'Despliegue real de la política hacia metas cuantificables por proceso.',
+        ev: 'Matriz de objetivos de calidad, fichas de indicadores y seguimiento mensual.',
+        nc: 'Cuando los compromisos de la política no tienen objetivos ni indicadores asociados.' },
+      { id: 9, iso: '9001', cap: '5.3', q: '¿Quién responde por este proceso y qué nivel de autoridad real tiene para detener un servicio no conforme?',
+        check: 'Asignación clara de dueños de proceso y autoridad efectiva para tomar decisiones.',
+        ev: 'Organigrama, MOF, perfiles de puesto, cartas de designación y registros de liberación/detención.',
+        nc: 'Cuando los responsables carecen de autoridad real o existen funciones contradictorias.' },
+      { id: 10, iso: '9001', cap: '5.3', q: '¿Qué ocurre con las responsabilidades y autoridades del SGC cuando hay rotación de personal o cambios organizacionales?',
+        check: 'Continuidad del control de procesos durante cambios internos.',
+        ev: 'Actas de entrega de cargo, actualización de organigramas y reasignación formal de roles.',
+        nc: 'Cuando los cambios dejan procesos críticos sin dueño asignado.' },
+      { id: 11, iso: '9001', cap: '4.1/4.2', q: '¿Cómo ha integrado la organización el cambio climático y las partes interesadas pertinentes en su análisis de contexto 2026?',
+        check: 'Determinación de cuestiones externas/internas incluyendo factores climáticos que afecten la calidad.',
+        ev: 'Matriz FODA / Contexto 2026, matriz de partes interesadas y planes de acción asociados.',
+        nc: 'Cuando el análisis de contexto omite el cambio climático o partes interesadas clave.' },
+      { id: 12, iso: '9001', cap: '6.1', q: '¿Cómo gestionan los riesgos y oportunidades que podrían afectar la conformidad del servicio o la resiliencia operativa?',
+        check: 'Enfoque basado en riesgos preventivo y eficacia de controles implementados.',
+        ev: 'Matriz de riesgos y oportunidades por proceso, planes de contingencia y seguimiento.',
+        nc: 'Cuando se identifican riesgos altos sin controles implementados ni seguimiento.' },
+      { id: 13, iso: '9001', cap: '7.1.5', q: '¿Cómo aseguran la trazabilidad y calibración vigente de los equipos de medición y ensayo utilizados en obra?',
+        check: 'Validez de los resultados de medición y control metrológico.',
+        ev: 'Inventario de equipos, certificados de calibración vigentes con trazabilidad y etiquetas de estado.',
+        nc: 'Cuando se usan equipos con calibración vencida o sin identificación de estado.' },
+      { id: 14, iso: '9001', cap: '7.5', q: '¿Cómo garantizan la integridad, ciberseguridad y control de versiones de la información documentada digital en 2026?',
+        check: 'Control de documentos digitales, respaldos y prevención de uso de versiones obsoletas.',
+        ev: 'Lista maestra en COSAPI Gestiona, permisos de acceso, logs de aprobación y backups.',
+        nc: 'Cuando en campo se utilizan formatos o planos obsoletos sin control.' },
+      { id: 15, iso: '9001', cap: '8.4', q: '¿Qué criterios de evaluación y reevaluación aplican a proveedores y subcontratistas críticos?',
+        check: 'Control de procesos, productos y servicios suministrados externamente.',
+        ev: 'Homologación de proveedores, evaluaciones de desempeño periódicas y órdenes de compra con requisitos.',
+        nc: 'Cuando se contratan proveedores críticos sin evaluación previa ni seguimiento.' },
+      { id: 16, iso: '9001', cap: '8.5.1', q: '¿Cómo verifican que las actividades de producción o prestación del servicio se ejecuten bajo condiciones controladas?',
+        check: 'Disponibilidad de instrucciones, planos aprobados, personal competente y liberación por etapas.',
+        ev: 'Protocolos de calidad, dossier de calidad, registros de liberación y trazabilidad de materiales.',
+        nc: 'Cuando se avanza a la siguiente etapa constructiva sin liberar los protocolos previos.' },
+      { id: 17, iso: '9001', cap: '8.7', q: '¿Cómo identifican y segregan las salidas o materiales no conformes para evitar su uso no intencional?',
+        check: 'Control físico y documental de productos/servicios no conformes.',
+        ev: 'Reportes de No Conformidad de producto, área de cuarentena señalizada y disposición aprobada.',
+        nc: 'Cuando material rechazado permanece mezclado con material conforme sin identificación.' },
+      { id: 18, iso: '9001', cap: '9.2', q: '¿El programa de auditorías internas considera la importancia de los procesos, cambios recientes y resultados previos?',
+        check: 'Planificación basada en riesgos e independencia de los auditores internos.',
+        ev: 'Programa anual de auditorías, planes de auditoría, competencia de auditores e informes.',
+        nc: 'Cuando auditores auditan su propio trabajo o no se auditan procesos con fallas recurrentes.' },
+      { id: 19, iso: '9001', cap: '10.2', q: '¿Cómo verifican que las acciones correctivas eliminaron la causa raíz y no solo corrigieron el síntoma?',
+        check: 'Metodología de análisis de causa raíz y verificación de eficacia posterior.',
+        ev: 'SAC/ACR cerradas, evidencia de implementación y verificación de eficacia tras un periodo.',
+        nc: 'Cuando las no conformidades se repiten por un análisis superficial de causa raíz.' },
+      { id: 20, iso: '9001', cap: 'Cultura 2026', q: '¿De qué manera la organización promueve una cultura de calidad ética y transparente en todos sus equipos?',
+        check: 'Fomento de reporte temprano de errores y mejora continua sin ocultamiento.',
+        ev: 'Programas de reconocimiento, lecciones aprendidas difundidas y encuestas de cultura interna.',
+        nc: 'Cuando se ocultan fallas de calidad por temor o falta de canales de reporte.' },
+      { id: 21, iso: '9001', cap: '8.5.6', q: '¿Cómo se revisan y autorizan los cambios no planificados en la operación para asegurar que se mantiene la conformidad?',
+        check: 'Control de cambios operativos y evidencia de quien autoriza el cambio.',
+        ev: 'Registros de gestión del cambio operativo, evaluaciones de impacto y autorizaciones.',
+        nc: 'Cuando se alteran métodos constructivos aprobados sin evaluación ni autorización formal.' },
+      { id: 22, iso: '9001', cap: '9.1.3', q: '¿Cómo analizan los datos provenientes de indicadores digitales para detectar tendencias antes de que ocurran fallas?',
+        check: 'Análisis preventivo de datos e información del desempeño.',
+        ev: 'Reportes analíticos trimestrales, gráficos de tendencia y planes preventivos.',
+        nc: 'Cuando solo se recopilan datos sin analizarlos para la toma de decisiones.' },
+
+      // ISO 14001:2026 (21 preguntas)
+      { id: 23, iso: '14001', cap: '5.1', q: '¿Qué temas ambientales y aspectos significativos revisa la Alta Dirección en sus comités de gestión?',
+        check: 'Integración de la gestión ambiental en las decisiones del negocio.',
+        ev: 'Actas de revisión por la dirección, reportes de desempeño ambiental y decisiones tomadas.',
+        nc: 'Cuando la dirección no evidencia revisión del desempeño ambiental ni atiende aspectos significativos.' },
+      { id: 24, iso: '14001', cap: '5.1', q: '¿Qué recursos aprobó la dirección para implementar controles ambientales y medidas de mitigación climática?',
+        check: 'Asignación efectiva de recursos financieros, técnicos y humanos para el SGA.',
+        ev: 'Presupuesto ambiental, contratos de gestión de residuos peligrosos y equipos de monitoreo.',
+        nc: 'Cuando faltan recursos para ejecutar los controles establecidos en la matriz ambiental.' },
+      { id: 25, iso: '14001', cap: '5.1', q: '¿Qué decisión concreta tomó la dirección frente al principal aspecto ambiental significativo del proyecto?',
+        check: 'Liderazgo activo frente a riesgos e impactos ambientales relevantes.',
+        ev: 'Acuerdos de dirección, inversión en plantas de tratamiento/contención y seguimiento de metas.',
+        nc: 'Cuando persisten impactos significativos sin respaldo ni decisiones de la dirección.' },
+      { id: 26, iso: '14001', cap: '5.2', q: '¿Qué compromisos ambientales obligatorios se reflejan en la Política Ambiental vigente?',
+        check: 'Inclusión de protección ambiental, cumplimiento legal y mejora continua.',
+        ev: 'Política Ambiental firmada, vigente y coherente con los impactos reales de la operación.',
+        nc: 'Cuando omite alguno de los tres compromisos obligatorios o no responde a los impactos reales.' },
+      { id: 27, iso: '14001', cap: '5.2', q: '¿Cómo se encuentra disponible la Política Ambiental para las partes interesadas externas (comunidad, clientes, autoridades)?',
+        check: 'Disponibilidad pública y transparencia hacia partes interesadas.',
+        ev: 'Portal web corporativo, murales de ingreso a obra y comunicaciones a grupos de interés.',
+        nc: 'Cuando la política no está disponible para las partes interesadas pertinentes.' },
+      { id: 28, iso: '14001', cap: '5.2', q: '¿Cómo verifican que el personal y contratistas comprenden y aportan al cumplimiento de la Política Ambiental?',
+        check: 'Toma de conciencia ambiental en trabajadores propios y terceros.',
+        ev: 'Registros de inducción ambiental, charlas de 5 minutos, evaluaciones y entrevistas.',
+        nc: 'Cuando el personal desconoce cómo sus tareas pueden generar impactos ambientales.' },
+      { id: 29, iso: '14001', cap: '5.3', q: '¿Quién asegura que el SGA funcione conforme a ISO 14001:2026 y quién reporta el desempeño ambiental a la dirección?',
+        check: 'Definición clara de roles, responsabilidades y líneas de reporte ambiental.',
+        ev: 'Organigrama, perfiles de puesto, MOF, designaciones e informes mensuales a dirección.',
+        nc: 'Cuando no existe responsable claro o no se informa el desempeño del SGA a la alta dirección.' },
+      { id: 30, iso: '14001', cap: '5.3', q: '¿Qué autoridad tiene el responsable ambiental para detener una actividad ante riesgo de derrame o incumplimiento legal?',
+        check: 'Autoridad efectiva para intervenir y escalar incidentes ambientales.',
+        ev: 'Carta de autoridad, procedimientos de parada de trabajo y registros de escalamiento.',
+        nc: 'Cuando el responsable ambiental no tiene autoridad para detener actividades de alto riesgo.' },
+      { id: 31, iso: '14001', cap: '4.1/6.1', q: '¿Cómo ha incorporado la organización los riesgos y oportunidades del cambio climático en su planificación ambiental 2026?',
+        check: 'Evaluación de vulnerabilidad climática y huella de carbono conforme a ISO 14001:2026.',
+        ev: 'Análisis de riesgos climáticos, inventario de GEI y planes de adaptación/mitigación.',
+        nc: 'Cuando no se evalúa el impacto del cambio climático en la operación ni de la operación en el clima.' },
+      { id: 32, iso: '14001', cap: '6.1.2', q: '¿La matriz de Aspectos e Impactos Ambientales (IA) considera condiciones normales, anormales, emergencias y perspectiva de ciclo de vida?',
+        check: 'Metodología integral de identificación y evaluación de significancia.',
+        ev: 'Matriz de Aspectos e Impactos Ambientales actualizada y criterios de significancia.',
+        nc: 'Cuando la matriz omite situaciones de emergencia, proveedores o disposición final.' },
+      { id: 33, iso: '14001', cap: '6.1.3', q: '¿Cómo identifican, actualizan y evalúan el cumplimiento de los requisitos legales ambientales aplicables?',
+        check: 'Control de obligaciones de cumplimiento (IGA, permisos, límites máximos permisibles).',
+        ev: 'Matriz de requisitos legales ambientales, permisos sectoriales y evaluaciones periódicas.',
+        nc: 'Cuando operan sin permisos vigentes o no evalúan el cumplimiento legal.' },
+      { id: 34, iso: '14001', cap: '8.1', q: '¿Cómo controlan el almacenamiento de sustancias químicas y combustibles para prevenir contaminación del suelo y agua?',
+        check: 'Controles operacionales en campo: bandejas antiderrame, hojas MSDS y rotulación.',
+        ev: 'Inspección visual de almacén químico, kits antiderrame y hojas de seguridad vigentes.',
+        nc: 'Cuando existen productos químicos sin bandeja de contención o sin hoja MSDS.' },
+      { id: 35, iso: '14001', cap: '8.1', q: '¿Cómo aseguran la trazabilidad legal de la segregación, transporte y disposición final de residuos sólidos peligrosos?',
+        check: 'Gestión integral de residuos con EO-RS autorizada y manifiestos.',
+        ev: 'Puntos ecológicos segregados, manifiestos de residuos peligrosos y certificados de disposición.',
+        nc: 'Cuando se mezclan residuos peligrosos con comunes o faltan manifiestos de disposición.' },
+      { id: 36, iso: '14001', cap: '8.2', q: '¿Qué simulacros de emergencia ambiental (derrames, fugas) han ejecutado y qué mejoras surgieron de su evaluación?',
+        check: 'Preparación y respuesta ante emergencias ambientales reales.',
+        ev: 'Programa de simulacros, informes de evaluación, fotos y cierre de observaciones.',
+        nc: 'Cuando no se realizan simulacros ambientales o no se corrigen las fallas detectadas.' },
+      { id: 37, iso: '14001', cap: '9.1.1', q: '¿Los monitoreos ambientales (ruido, calidad de aire, agua, emisiones) se realizan según la frecuencia y normativa aprobada?',
+        check: 'Seguimiento y medición del desempeño ambiental con laboratorios acreditados.',
+        ev: 'Informes de monitoreo ambiental, certificados de acreditación INACAL y comparación con ECA/LMP.',
+        nc: 'Cuando se incumplen frecuencias de monitoreo o no se toman acciones ante excesos.' },
+      { id: 38, iso: '14001', cap: 'Biodiversidad 2026', q: '¿Qué medidas de protección de biodiversidad y ecosistemas aplica el proyecto según el enfoque ISO 14001:2026?',
+        check: 'Conservación de flora, fauna y recursos hídricos en el área de influencia.',
+        ev: 'Planes de manejo ambiental, rescate/reubicación de especies y control de consumo hídrico.',
+        nc: 'Cuando se intervienen áreas no autorizadas o se incumplen compromisos del IGA.' },
+      { id: 39, iso: '14001', cap: '8.1 Cadena Valor', q: '¿Cómo comunican los requisitos ambientales a proveedores y transportistas que ingresan a las instalaciones?',
+        check: 'Control ambiental sobre contratistas y cadena de suministro.',
+        ev: 'Cláusulas ambientales en contratos, charlas de ingreso y checklist de vehículos.',
+        nc: 'Cuando contratistas operan sin conocer ni cumplir los controles ambientales del sitio.' },
+      { id: 40, iso: '14001', cap: '6.2', q: '¿Los objetivos ambientales son medibles y cuentan con planes de acción claros (qué, quién, cuándo y recursos)?',
+        check: 'Planificación para lograr los objetivos ambientales.',
+        ev: 'Programas de gestión ambiental, indicadores de reducción de huella/residuos y avances.',
+        nc: 'Cuando existen objetivos sin metas medibles ni responsables de ejecución.' },
+      { id: 41, iso: '14001', cap: '9.1.2', q: '¿Con qué frecuencia evalúan el cumplimiento legal ambiental y qué hacen si detectan un requisito incumplido?',
+        check: 'Evaluación periódica de compliance ambiental.',
+        ev: 'Registro de evaluación legal periódica y planes de adecuación.',
+        nc: 'Cuando no existe evidencia objetiva de evaluación periódica del cumplimiento legal.' },
+      { id: 42, iso: '14001', cap: '10.2', q: '¿Cómo investigan los incidentes ambientales (ej. amagos de derrame) para evitar que vuelvan a suceder?',
+        check: 'Gestión de no conformidades e incidentes ambientales.',
+        ev: 'Reportes de incidentes ambientales, análisis de causa raíz y acciones implementadas.',
+        nc: 'Cuando los incidentes ambientales menores no se reportan ni se investigan.' },
+      { id: 43, iso: '14001', cap: '7.4', q: '¿Cómo gestionan las comunicaciones ambientales externas con comunidades vecinas o entidades fiscalizadoras (OEFA)?',
+        check: 'Proceso estructurado de comunicación externa.',
+        ev: 'Matriz de comunicaciones, cargos de recepción de reportes y actas de diálogo comunitario.',
+        nc: 'Cuando no hay control ni respuesta oportuna a requerimientos ambientales externos.' },
+
+      // ISO 45001:2026 (21 preguntas)
+      { id: 44, iso: '45001', cap: '5.1', q: '¿Qué peligro crítico se eliminó o redujo significativamente gracias a una decisión directa de la Alta Dirección?',
+        check: 'Liderazgo visible en SST orientado a eliminar peligros y reducir riesgos.',
+        ev: 'Actas de comité, inversiones en controles de ingeniería, inspecciones gerenciales y entrevistas.',
+        nc: 'Cuando la dirección delega totalmente la SST y tolera condiciones inseguras.' },
+      { id: 45, iso: '45001', cap: '5.1', q: '¿Cómo protege la dirección a un trabajador que reporta una condición insegura o ejerce su derecho a detener una tarea riesgosa?',
+        check: 'Cultura justa y protección efectiva contra represalias.',
+        ev: 'Política de negativa al trabajo inseguro, reportes de actos/condiciones subestándar y entrevistas.',
+        nc: 'Cuando existen represalias o temor entre los trabajadores para reportar peligros.' },
+      { id: 46, iso: '45001', cap: '5.1', q: '¿Qué incidentes, indicadores de accidentalidad y cumplimiento del PAL revisa periódicamente la Alta Dirección?',
+        check: 'Seguimiento activo de la dirección al desempeño en SST.',
+        ev: 'Actas de revisión por la dirección, seguimiento del Plan Anual de Seguridad (PAL) e investigaciones.',
+        nc: 'Cuando la dirección no revisa investigaciones de incidentes ni el avance del PAL.' },
+      { id: 47, iso: '45001', cap: '5.2', q: '¿La Política de SST incluye todos los compromisos obligatorios de ISO 45001:2026 (condiciones seguras, ley, eliminación de peligros, consulta y participación)?',
+        check: 'Integridad de los compromisos exigidos por la cláusula 5.2.',
+        ev: 'Política de SST firmada, vigente y coherente con los riesgos reales de la organización.',
+        nc: 'Cuando falta alguno de los compromisos obligatorios o la política es genérica.' },
+      { id: 48, iso: '45001', cap: '5.2', q: '¿Qué evidencia demuestra que los trabajadores comprenden la Política de SST y cómo se aplica a sus riesgos diarios?',
+        check: 'Comprensión práctica en campo más allá de la simple publicación.',
+        ev: 'Entrevistas aleatorias en obra, registros de inducción y evaluaciones.',
+        nc: 'Cuando la política no ha sido comunicada o los trabajadores no la comprenden.' },
+      { id: 49, iso: '45001', cap: '5.3', q: '¿Cómo se definen y comunican las responsabilidades de SST en todos los niveles, manteniendo la dirección la responsabilidad final?',
+        check: 'Claridad de roles en línea de mando y operarios.',
+        ev: 'Organigrama, MOF, Reglamento Interno de SST (RISST) y matriz de responsabilidades.',
+        nc: 'Cuando las responsabilidades de SST no están definidas o los supervisores desconocen su rol.' },
+      { id: 50, iso: '45001', cap: '5.3', q: '¿Conocen los trabajadores los canales para reportar peligros e incidentes y reciben retroalimentación oportuna?',
+        check: 'Operatividad de los canales de reporte en todos los turnos.',
+        ev: 'Tarjetas de reporte de peligros, buzón/app digital, registros de cierre y entrevistas.',
+        nc: 'Cuando el personal no sabe cómo reportar o los reportes quedan sin atención.' },
+      { id: 51, iso: '45001', cap: '5.4', q: '¿En qué decisiones específicas de SST participaron los trabajadores no directivos durante el último trimestre?',
+        check: 'Participación real y activa conforme a la cláusula 5.4.',
+        ev: 'Actas del Comité SST, talleres de revisión de IPERC, investigaciones de incidentes y listas de asistencia.',
+        nc: 'Cuando solo se informa a los trabajadores después de que la gerencia ya tomó las decisiones.' },
+      { id: 52, iso: '45001', cap: '5.4', q: '¿Cómo intervinieron los trabajadores de campo en la elaboración y actualización del IPERC y los ATS?',
+        check: 'Construcción participativa de la identificación de peligros y controles.',
+        ev: 'IPERC y ATS firmados con aportes de los ejecutores, actas de revisión y entrevistas.',
+        nc: 'Cuando el IPERC se elabora únicamente en gabinete sin participación de los trabajadores.' },
+      { id: 53, iso: '45001', cap: '5.4', q: '¿Qué barreras (horario, idioma, temor, falta de tiempo o recursos) identificó y eliminó la organización para facilitar la participación?',
+        check: 'Eliminación activa de obstáculos a la consulta y participación.',
+        ev: 'Reuniones en horarios pagados, material adaptado/traducido y facilidades al Comité SST.',
+        nc: 'Cuando existen barreras evidentes que impiden la participación de ciertos grupos o turnos.' },
+      { id: 54, iso: '45001', cap: '5.4', q: '¿Qué aporte o sugerencia de mejora en SST presentada por un trabajador fue evaluada, aceptada o respondida recientemente?',
+        check: 'Trazabilidad entre los aportes recibidos y la respuesta de la organización.',
+        ev: 'Matriz de sugerencias/consultas de trabajadores, respuestas documentadas e implementación.',
+        nc: 'Cuando los aportes de los trabajadores no se evalúan ni reciben respuesta.' },
+      { id: 55, iso: '45001', cap: '6.1.2 Psicosocial', q: '¿Cómo identifica y controla la organización los factores de riesgo psicosocial y la salud mental según ISO 45001:2026?',
+        check: 'Enfoque actualizado en bienestar integral, carga mental y prevención de estrés laboral.',
+        ev: 'Evaluación de riesgos psicosociales, programas de bienestar/salud mental y seguimiento.',
+        nc: 'Cuando se omiten los factores psicosociales en la identificación de peligros.' },
+      { id: 56, iso: '45001', cap: '8.1.2', q: '¿Cómo aplican la jerarquía de controles antes de recurrir únicamente al Equipo de Protección Personal (EPP)?',
+        check: 'Priorización de eliminación, sustitución y controles de ingeniería.',
+        ev: 'Matriz IPERC, guardas de seguridad, sistemas colectivos instalados y evidencia en campo.',
+        nc: 'Cuando se pretende controlar un peligro crítico únicamente entregando EPP.' },
+      { id: 57, iso: '45001', cap: '8.1.3', q: '¿Cómo gestionan los riesgos de SST antes de introducir nueva maquinaria, procesos o cambios en el entorno de trabajo?',
+        check: 'Gestión del cambio preventivo en SST.',
+        ev: 'Evaluación de riesgos previa al cambio, autorización de puesta en marcha y capacitación.',
+        nc: 'Cuando se introducen equipos o métodos nuevos sin evaluar previamente sus peligros.' },
+      { id: 58, iso: '45001', cap: '8.1.4', q: '¿Cómo aseguran que los contratistas y visitantes cumplan los estándares de seguridad de COSAPI ("Cero Accidentes con Integridad")?',
+        check: 'Coordinación y control operacional de contratistas.',
+        ev: 'Inducción hombre nuevo, permisos de trabajo de alto riesgo (PETAR), SCTR vigente e inspecciones.',
+        nc: 'Cuando contratistas realizan trabajos de alto riesgo sin PETAR ni controles verificados.' },
+      { id: 59, iso: '45001', cap: '8.2', q: '¿Las brigadas de emergencia están capacitadas, equipadas y han realizado simulacros acordes a los riesgos reales del sitio?',
+        check: 'Preparación y respuesta ante emergencias de SST.',
+        ev: 'Plan de emergencias, lista de brigadistas, inspección de equipos de rescate e informes de simulacro.',
+        nc: 'Cuando faltan equipos de emergencia operativos o no se ejecutan simulacros.' },
+      { id: 60, iso: '45001', cap: '9.1.2', q: '¿Cómo evalúan el cumplimiento de la normativa nacional de SST (Ley 29783, DS 005-2012-TR, normas sectoriales)?',
+        check: 'Evaluación periódica de requisitos legales de SST.',
+        ev: 'Matriz legal de SST, auditorías legales periódicas y planes de cierre de brechas.',
+        nc: 'Cuando se incumplen requisitos legales obligatorios de SST sin acción correctiva.' },
+      { id: 61, iso: '45001', cap: '10.2', q: '¿Las investigaciones de incidentes y accidentes cuentan con participación de los trabajadores y atacan causas raíz sistémicas?',
+        check: 'Investigación objetiva sin buscar culpables, enfocada en fallas del sistema.',
+        ev: 'Informes de investigación de incidentes, árbol de causas, firma del Comité SST y cierre.',
+        nc: 'Cuando se atribuye todo accidente a "error humano" sin analizar controles del sistema.' },
+      { id: 62, iso: '45001', cap: '7.2', q: '¿Cómo aseguran que los operadores de equipos críticos y trabajos de alto riesgo (altura, caliente, izaje) sean competentes y autorizados?',
+        check: 'Competencia verificada y autorizaciones vigentes.',
+        ev: 'Certificados de competencia, licencias, acreditaciones de alto riesgo y exámenes médicos.',
+        nc: 'Cuando personal sin acreditación vigente ejecuta trabajos de alto riesgo.' },
+      { id: 63, iso: '45001', cap: 'Trabajo Híbrido 2026', q: '¿Cómo gestiona la organización la ergonomía y seguridad en modalidades de trabajo remoto, híbrido o digitalizado conforme a ISO 45001:2026?',
+        check: 'Cobertura de SST para trabajadores fuera de instalaciones tradicionales.',
+        ev: 'Guías de ergonomía digital, pausas activas, reporte de incidentes remotos y seguimiento.',
+        nc: 'Cuando se excluye al personal remoto o digital de la gestión de riesgos laborales.' },
+      { id: 64, iso: '45001', cap: '9.3', q: '¿La Revisión por la Dirección en SST incluye el análisis de tendencias de incidentes, resultados de consulta/participación y adecuación de recursos?',
+        check: 'Entradas y salidas completas de la Revisión por la Dirección (9.3).',
+        ev: 'Informe y acta de Revisión por la Dirección integrada con decisiones documentadas.',
+        nc: 'Cuando el acta de revisión omite el desempeño de participación o la asignación de recursos.' }
+    ];
+
+    const AuditorChatbot = {
+      currentFilter: 'ALL',
+
+      init() {
+        this.renderQuestions();
+        this.addBotMessage(
+          '¡Hola! Soy <strong>COSAPIN, tu Auditor Líder Trinorma 2026</strong>. Selecciona cualquiera de las <strong>64 preguntas reales de auditoría</strong> de la izquierda o escríbeme tu consulta. Te indicaré qué comprobar, qué evidencia pedir y cuándo se configura una No Conformidad.'
+        );
+      },
+
+      setFilter(iso) {
+        this.currentFilter = iso;
+        document.querySelectorAll('.cb-filter-btn').forEach(btn => {
+          btn.className = 'cb-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition';
+        });
+        document.getElementById(`cb-filter-${iso}`).className =
+          'cb-filter-btn px-3 py-1.5 rounded-xl text-xs font-extrabold bg-[#0096D6] text-white transition';
+        this.renderQuestions();
+        MusicEngine.playSfx('click');
+      },
+
+      renderQuestions() {
+        const query = document.getElementById('cb-search-input').value.trim().toLowerCase();
+        const filtered = AUDITOR_QUESTIONS_64.filter(item => {
+          const matchIso = this.currentFilter === 'ALL' || item.iso === this.currentFilter;
+          const matchText = !query ||
+            item.q.toLowerCase().includes(query) ||
+            item.cap.toLowerCase().includes(query) ||
+            item.check.toLowerCase().includes(query) ||
+            item.ev.toLowerCase().includes(query);
+          return matchIso && matchText;
+        });
+
+        document.getElementById('cb-question-counter').textContent = `${filtered.length} preguntas`;
+        const list = document.getElementById('cb-questions-list');
+        list.innerHTML = '';
+
+        filtered.forEach(item => {
+          const badgeColor = item.iso === '9001' ? 'bg-[#E6F4FA] text-[#0077B6]'
+                           : item.iso === '14001' ? 'bg-emerald-100 text-emerald-800'
+                           : 'bg-rose-100 text-rose-800';
+
+          const btn = document.createElement('button');
+          btn.className = 'w-full text-left bg-white hover:bg-[#E6F4FA]/50 border border-slate-200 hover:border-[#0096D6] rounded-xl p-2.5 transition shadow-sm';
+          btn.innerHTML = `
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold ${badgeColor}">ISO ${item.iso}:2026 · ${item.cap}</span>
+              <span class="text-[10px] text-slate-400 font-bold">#${item.id}</span>
+            </div>
+            <p class="text-xs font-bold text-slate-700 leading-snug">${item.q}</p>
+          `;
+          btn.onclick = () => this.askPredefined(item);
+          list.appendChild(btn);
+        });
+      },
+
+      askPredefined(item) {
+        this.addUserMessage(`[ISO ${item.iso}:2026 · Cláusula ${item.cap}] ${item.q}`);
+        MusicEngine.playSfx('ok');
+        const reply = `
+          <div class="space-y-2">
+            <div class="inline-block px-2.5 py-0.5 rounded-lg bg-[#0096D6] text-white text-[10px] font-extrabold uppercase">
+              Guía de Auditoría · ISO ${item.iso}:2026 (${item.cap})
+            </div>
+            <div class="bg-blue-50/80 border border-blue-200 rounded-xl p-2.5">
+              <div class="text-[11px] font-black text-[#0077B6] uppercase"><i class="fa-solid fa-magnifying-glass mr-1"></i>Qué debe comprobar el auditor:</div>
+              <p class="text-xs text-slate-700 mt-0.5">${item.check}</p>
+            </div>
+            <div class="bg-emerald-50/80 border border-emerald-200 rounded-xl p-2.5">
+              <div class="text-[11px] font-black text-emerald-800 uppercase"><i class="fa-solid fa-folder-open mr-1"></i>Evidencia objetiva a solicitar:</div>
+              <p class="text-xs text-slate-700 mt-0.5">${item.ev}</p>
+            </div>
+            <div class="bg-rose-50/80 border border-rose-200 rounded-xl p-2.5">
+              <div class="text-[11px] font-black text-rose-800 uppercase"><i class="fa-solid fa-triangle-exclamation mr-1"></i>¿Cuándo habría No Conformidad?</div>
+              <p class="text-xs text-slate-700 mt-0.5">${item.nc}</p>
+            </div>
+          </div>
+        `;
+        setTimeout(() => {
+          this.addBotMessage(reply);
+          CosapinAssistant.say(`Te muestro la guía exacta para auditar la cláusula ${item.cap} de ISO ${item.iso}:2026.`);
+        }, 250);
+      },
+
+      sendFreeText() {
+        const input = document.getElementById('cb-user-input');
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        this.addUserMessage(text);
+
+        const lower = text.toLowerCase();
+        // Buscar coincidencias en el banco de 64 preguntas
+        const matches = AUDITOR_QUESTIONS_64.filter(q =>
+          lower.split(/\s+/).some(w => w.length > 3 && (
+            q.q.toLowerCase().includes(w) ||
+            q.cap.toLowerCase().includes(w) ||
+            q.check.toLowerCase().includes(w) ||
+            q.ev.toLowerCase().includes(w)
+          ))
+        );
+
+        setTimeout(() => {
+          if (lower.includes('no conformidad') || lower.includes('redactar')) {
+            this.addBotMessage(`
+              <strong>Criterio COSAPI para redactar una No Conformidad:</strong><br>
+              Debe incluir obligatoriamente 3 partes:<br>
+              1) <strong>Evidencia objetiva encontrada</strong> (registros, entrevistas, hechos verificados).<br>
+              2) <strong>Requisito aplicable incumplido</strong> (Norma ISO 2026, cláusula o procedimiento interno).<br>
+              3) <strong>Descripción clara de la brecha</strong> detectada.<br>
+              <em>Nota: Si la evidencia no es suficiente, amplía la muestra antes de concluir.</em>
+            `);
+          } else if (matches.length > 0) {
+            const best = matches[0];
+            this.askPredefinedDirect(best);
+          } else {
+            this.addBotMessage(
+              'Como Auditor Líder Trinorma 2026 te recomiendo triangular siempre: <strong>1) Revisión documental</strong> (actas, políticas, IPERC, matrices), <strong>2) Entrevistas claras y abiertas</strong> al personal, y <strong>3) Observación directa en campo</strong>. Prueba buscar una palabra clave en el panel izquierdo (ej. <em>5.4, política, clima, IPERC, recursos, cliente</em>).'
+            );
+          }
+          MusicEngine.playSfx('ok');
+        }, 300);
+      },
+
+      askPredefinedDirect(item) {
+        const reply = `
+          <div class="space-y-2">
+            <div class="text-xs font-extrabold text-[#0077B6]">Encontré esta referencia clave en ISO ${item.iso}:2026 (${item.cap}):</div>
+            <p class="text-xs font-bold text-slate-800">"${item.q}"</p>
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-2 text-xs"><strong>Comprobar:</strong> ${item.check}</div>
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2 text-xs"><strong>Evidencia:</strong> ${item.ev}</div>
+            <div class="bg-rose-50 border border-rose-200 rounded-xl p-2 text-xs"><strong>No Conformidad:</strong> ${item.nc}</div>
+          </div>
+        `;
+        this.addBotMessage(reply);
+      },
+
+      addUserMessage(text) {
+        const box = document.getElementById('cb-messages');
+        const div = document.createElement('div');
+        div.className = 'flex justify-end';
+        div.innerHTML = `
+          <div class="max-w-[85%] bg-[#0096D6] text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-xs sm:text-sm font-semibold shadow-sm">
+            ${text}
+          </div>
+        `;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+      },
+
+      addBotMessage(htmlContent) {
+        const box = document.getElementById('cb-messages');
+        const div = document.createElement('div');
+        div.className = 'flex justify-start';
+        div.innerHTML = `
+          <div class="max-w-[92%] bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-sm px-4 py-3 text-xs sm:text-sm shadow-sm">
+            ${htmlContent}
+          </div>
+        `;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+      }
+    };
+
+    /* -------------------------------------------------------------------------
+       7. VISTA 5: CHECKLIST DE AUDITORÍA INTEGRADA (EDITABLE, GUARDABLE Y CSV)
+    ------------------------------------------------------------------------- */
+    const DEFAULT_CHECKLIST_ITEMS = [
+      { id: 101, iso: '9001', clause: '5.1.1', req: '¿La Alta Dirección demuestra liderazgo, revisa resultados de calidad y asigna recursos (incluyendo herramientas digitales 2026)?', ev: 'Actas de revisión por la dirección, presupuestos y COSAPI Gestiona', status: 'PENDING', finding: '' },
+      { id: 102, iso: '9001', clause: '5.1.2', req: '¿Se revisan los requisitos contractuales/legales antes de asumir compromisos y se controlan los cambios y reclamos del cliente?', ev: 'Contratos revisados, matriz de requisitos, encuestas y reclamos', status: 'PENDING', finding: '' },
+      { id: 103, iso: '9001', clause: '5.2', req: '¿La Política de Calidad está vigente, aprobada, comunicada y reflejada en objetivos medibles?', ev: 'Política vigente, control de versiones, inducciones y entrevistas', status: 'PENDING', finding: '' },
+      { id: 104, iso: '9001', clause: '5.3', req: '¿Están definidos y comunicados los roles, responsabilidades y autoridades de cada proceso sin vacíos tras cambios?', ev: 'Organigrama, MOF, perfiles de puesto y designaciones', status: 'PENDING', finding: '' },
+      { id: 201, iso: '14001', clause: '5.1', req: '¿La dirección integra la gestión ambiental y la acción frente al cambio climático en sus decisiones y asigna recursos al SGA?', ev: 'Actas de revisión, matriz de aspectos significativos y presupuestos', status: 'PENDING', finding: '' },
+      { id: 202, iso: '14001', clause: '5.2', req: '¿La Política Ambiental incluye protección ambiental, cumplimiento legal y mejora continua, y está disponible para partes interesadas?', ev: 'Política ambiental aprobada, web/murales e inducciones', status: 'PENDING', finding: '' },
+      { id: 203, iso: '14001', clause: '5.3', req: '¿Se ha designado quién mantiene el SGA, controla aspectos ambientales y reporta el desempeño ambiental a la dirección?', ev: 'Perfiles de puesto, informes ambientales y registros de escalamiento', status: 'PENDING', finding: '' },
+      { id: 204, iso: '14001', clause: '8.1', req: '¿Se aplican controles operacionales en campo para residuos peligrosos, sustancias químicas y prevención de derrames?', ev: 'Inspección de almacén químico, hojas MSDS y manifiestos EO-RS', status: 'PENDING', finding: '' },
+      { id: 301, iso: '45001', clause: '5.1', req: '¿La Alta Dirección ejerce liderazgo visible en SST, elimina peligros, realiza inspecciones gerenciales y protege de represalias?', ev: 'Inspecciones gerenciales, actas Comité SST, PAL y reportes de peligros', status: 'PENDING', finding: '' },
+      { id: 302, iso: '45001', clause: '5.2', req: '¿La Política de SST incluye condiciones seguras, cumplimiento legal, eliminación de peligros, consulta/participación y mejora continua?', ev: 'Política SST vigente, difusión y entrevistas con trabajadores', status: 'PENDING', finding: '' },
+      { id: 303, iso: '45001', clause: '5.3', req: '¿Las responsabilidades de SST están definidas en todos los niveles y los trabajadores saben cómo reportar peligros sin temor?', ev: 'RISST, matriz de responsabilidades y canales de reporte', status: 'PENDING', finding: '' },
+      { id: 304, iso: '45001', clause: '5.4', req: '¿Existe consulta y participación real de los trabajadores en el IPERC, ATS, investigaciones y eliminación de barreras (incluyendo riesgos psicosociales 2026)?', ev: 'IPERC y ATS participativos, actas Comité SST y evaluación psicosocial', status: 'PENDING', finding: '' }
+    ];
+
+    const ChecklistApp = {
+      items: [],
+      filter: 'ALL',
+
+      init() {
+        document.getElementById('ck-date').valueAsDate = new Date();
+        const saved = localStorage.getItem('cosapi_trinorma_2026_checklist');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            this.items = parsed.items || [...DEFAULT_CHECKLIST_ITEMS];
+            if (parsed.meta) {
+              document.getElementById('ck-company').value = parsed.meta.company || '';
+              document.getElementById('ck-process').value = parsed.meta.process || '';
+              document.getElementById('ck-auditor').value = parsed.meta.auditor || '';
+              if (parsed.meta.date) document.getElementById('ck-date').value = parsed.meta.date;
+            }
+          } catch (e) {
+            this.items = [...DEFAULT_CHECKLIST_ITEMS];
+          }
+        } else {
+          this.items = [...DEFAULT_CHECKLIST_ITEMS];
+        }
+        this.render();
+      },
+
+      setFilter(iso) {
+        this.filter = iso;
+        document.querySelectorAll('.ck-filter-btn').forEach(btn => {
+          btn.className = 'ck-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200';
+        });
+        document.getElementById(`ck-tab-${iso}`).className =
+          'ck-filter-btn px-3.5 py-2 rounded-xl text-xs font-extrabold bg-[#0096D6] text-white';
+        this.render();
+      },
+
+      toggleAddForm() {
+        document.getElementById('ck-add-form').classList.toggle('hidden');
+      },
+
+      addItem() {
+        const iso = document.getElementById('ck-new-iso').value;
+        const clause = document.getElementById('ck-new-clause').value.trim() || '5.1';
+        const req = document.getElementById('ck-new-req').value.trim();
+        const ev = document.getElementById('ck-new-ev').value.trim() || 'Registros y entrevistas';
+        if (!req) {
+          showToast('Escribe la pregunta o requisito antes de añadir.');
+          return;
+        }
+        this.items.push({
+          id: Date.now(),
+          iso,
+          clause,
+          req,
+          ev,
+          status: 'PENDING',
+          finding: ''
+        });
+        document.getElementById('ck-new-req').value = '';
+        document.getElementById('ck-new-ev').value = '';
+        this.toggleAddForm();
+        this.saveToStorage(false);
+        this.render();
+        MusicEngine.playSfx('ok');
+        showToast('Ítem agregado al checklist de auditoría.');
+      },
+
+      setStatus(id, status) {
+        const item = this.items.find(i => i.id === id);
+        if (item) {
+          item.status = status;
+          this.saveToStorage(false);
+          this.render();
+          MusicEngine.playSfx('click');
+        }
+      },
+
+      updateField(id, field, value) {
+        const item = this.items.find(i => i.id === id);
+        if (item) {
+          item[field] = value;
+          this.saveToStorage(false);
+        }
+      },
+
+      deleteItem(id) {
+        this.items = this.items.filter(i => i.id !== id);
+        this.saveToStorage(false);
+        this.render();
+        showToast('Ítem eliminado del checklist.');
+      },
+
+      saveToStorage(notify = true) {
+        const payload = {
+          meta: {
+            company: document.getElementById('ck-company').value,
+            process: document.getElementById('ck-process').value,
+            auditor: document.getElementById('ck-auditor').value,
+            date: document.getElementById('ck-date').value
+          },
+          items: this.items
+        };
+        localStorage.setItem('cosapi_trinorma_2026_checklist', JSON.stringify(payload));
+        if (notify) {
+          MusicEngine.playSfx('ok');
+          showToast('Avance de auditoría guardado localmente con éxito.');
+        }
+      },
+
+      updateKPIs() {
+        const calcStats = (list) => {
+          const applicable = list.filter(i => i.status !== 'NA' && i.status !== 'PENDING');
+          const conformes = list.filter(i => i.status === 'C').length;
+          const pct = applicable.length === 0 ? 0 : Math.round((conformes / applicable.length) * 100);
+          return { pct, conformes, total: applicable.length };
+        };
+
+        const global = calcStats(this.items);
+        const s9001 = calcStats(this.items.filter(i => i.iso === '9001'));
+        const s14001 = calcStats(this.items.filter(i => i.iso === '14001'));
+        const s45001 = calcStats(this.items.filter(i => i.iso === '45001'));
+
+        const cCount = this.items.filter(i => i.status === 'C').length;
+        const ncCount = this.items.filter(i => i.status === 'NC').length;
+        const obsCount = this.items.filter(i => i.status === 'OBS').length;
+
+        document.getElementById('ck-kpi-global').textContent = `${global.pct}%`;
+        document.getElementById('ck-bar-global').style.width = `${global.pct}%`;
+        document.getElementById('ck-kpi-counts').textContent = `${cCount} C · ${ncCount} NC · ${obsCount} OBS`;
+
+        document.getElementById('ck-kpi-9001').textContent = `${s9001.pct}%`;
+        document.getElementById('ck-bar-9001').style.width = `${s9001.pct}%`;
+
+        document.getElementById('ck-kpi-14001').textContent = `${s14001.pct}%`;
+        document.getElementById('ck-bar-14001').style.width = `${s14001.pct}%`;
+
+        document.getElementById('ck-kpi-45001').textContent = `${s45001.pct}%`;
+        document.getElementById('ck-bar-45001').style.width = `${s45001.pct}%`;
+      },
+
+      render() {
+        this.updateKPIs();
+        const tbody = document.getElementById('ck-table-body');
+        tbody.innerHTML = '';
+
+        const visible = this.items.filter(i => this.filter === 'ALL' || i.iso === this.filter);
+        visible.forEach(item => {
+          const isoBadge = item.iso === '9001' ? 'bg-[#E6F4FA] text-[#0077B6]'
+                         : item.iso === '14001' ? 'bg-emerald-100 text-emerald-800'
+                         : 'bg-rose-100 text-rose-800';
+
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50/90 transition align-top';
+          tr.innerHTML = `
+            <td class="p-3 whitespace-nowrap">
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold ${isoBadge}">ISO ${item.iso}:2026</span>
+              <div class="font-black text-slate-700 mt-1">Cláusula ${item.clause}</div>
+            </td>
+            <td class="p-3 min-w-[230px]">
+              <textarea rows="2" onchange="ChecklistApp.updateField(${item.id}, 'req', this.value)"
+                        class="w-full bg-transparent hover:bg-white focus:bg-white border border-transparent focus:border-[#0096D6] rounded-lg p-1.5 font-semibold text-slate-800 resize-y focus:outline-none">${item.req}</textarea>
+            </td>
+            <td class="p-3 min-w-[180px]">
+              <textarea rows="2" onchange="ChecklistApp.updateField(${item.id}, 'ev', this.value)"
+                        class="w-full bg-transparent hover:bg-white focus:bg-white border border-transparent focus:border-[#0096D6] rounded-lg p-1.5 text-slate-600 resize-y focus:outline-none">${item.ev}</textarea>
+            </td>
+            <td class="p-3 text-center whitespace-nowrap">
+              <div class="inline-flex rounded-xl bg-slate-100 p-1 gap-1">
+                <button onclick="ChecklistApp.setStatus(${item.id}, 'C')" title="Conforme"
+                        class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition ${item.status === 'C' ? 'bg-emerald-600 text-white shadow' : 'text-slate-600 hover:bg-white'}">
+                  C
+                </button>
+                <button onclick="ChecklistApp.setStatus(${item.id}, 'NC')" title="No Conforme"
+                        class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition ${item.status === 'NC' ? 'bg-rose-600 text-white shadow' : 'text-slate-600 hover:bg-white'}">
+                  NC
+                </button>
+                <button onclick="ChecklistApp.setStatus(${item.id}, 'OBS')" title="Observación / Oportunidad de Mejora"
+                        class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition ${item.status === 'OBS' ? 'bg-amber-500 text-white shadow' : 'text-slate-600 hover:bg-white'}">
+                  OBS
+                </button>
+                <button onclick="ChecklistApp.setStatus(${item.id}, 'NA')" title="No Aplica"
+                        class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition ${item.status === 'NA' ? 'bg-slate-600 text-white shadow' : 'text-slate-600 hover:bg-white'}">
+                  N/A
+                </button>
+              </div>
+            </td>
+            <td class="p-3 min-w-[200px]">
+              <textarea rows="2" placeholder="Registrar evidencia verificada o brecha..."
+                        onchange="ChecklistApp.updateField(${item.id}, 'finding', this.value)"
+                        class="w-full bg-white border border-slate-200 focus:border-[#0096D6] rounded-xl p-2 text-xs text-slate-700 resize-y focus:outline-none">${item.finding || ''}</textarea>
+            </td>
+            <td class="p-3 text-center no-print">
+              <button onclick="ChecklistApp.deleteItem(${item.id})" title="Eliminar ítem"
+                      class="w-8 h-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      },
+
+      exportCSV() {
+        const company = document.getElementById('ck-company').value;
+        const process = document.getElementById('ck-process').value;
+        const auditor = document.getElementById('ck-auditor').value;
+        const date = document.getElementById('ck-date').value;
+        const globalPct = document.getElementById('ck-kpi-global').textContent;
+
+        let csv = '\uFEFF'; // BOM UTF-8 para Excel
+        csv += `REPORTE DE AUDITORIA INTEGRADA TRINORMA ISO 2026 - COSAPI\n`;
+        csv += `Empresa/Proyecto;${company};Proceso;${process}\n`;
+        csv += `Auditor Lider;${auditor};Fecha;${date};Cumplimiento Global;${globalPct}\n\n`;
+        csv += `Norma;Clausula;Requisito / Pregunta;Evidencia Esperada;Estado;Hallazgo / Evidencia Encontrada\n`;
+
+        const statusMap = { C: 'CONFORME', NC: 'NO CONFORME', OBS: 'OBSERVACION', NA: 'NO APLICA', PENDING: 'PENDIENTE' };
+        this.items.forEach(item => {
+          const clean = (s) => `"${String(s || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`;
+          csv += `${clean('ISO ' + item.iso + ':2026')};${clean(item.clause)};${clean(item.req)};${clean(item.ev)};${clean(statusMap[item.status])};${clean(item.finding)}\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Checklist_Auditoria_Trinorma2026_COSAPI_${date || 'Reporte'}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        MusicEngine.playSfx('win');
+        showToast('Reporte CSV descargado correctamente.');
+      }
+    };
+
+    /* -------------------------------------------------------------------------
+       8. INICIALIZACIÓN AL CARGAR LA PÁGINA
+    ------------------------------------------------------------------------- */
+    window.addEventListener('DOMContentLoaded', () => {
+      window._activeView = 'rosco';
+      MusicEngine.initUI();
+      RoscoGame.init();
+      TriviaGame.start();
+      WordSearchGame.init();
+      AuditorChatbot.init();
+      ChecklistApp.init();
+    });
+  </script>
+</body>
+</html>
